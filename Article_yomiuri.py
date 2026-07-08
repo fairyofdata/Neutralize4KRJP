@@ -4,7 +4,6 @@ from bs4 import BeautifulSoup
 import time
 import datetime
 from urllib.parse import urljoin
-import openai
 import pandas as pd
 import streamlit as st
 

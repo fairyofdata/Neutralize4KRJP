@@ -1,30 +1,31 @@
-import openai
-import pandas as pd
 import streamlit as st
 
-# Function to summarize an article using OpenAI API
-def summarize_article(article_content, language):
-    # Limit the content length to avoid token limit issues
-    truncated_content = article_content[:2000]  # Limit the article to 2000 characters to manage token limits
 
-    # Create prompt for summarization
+def summarize_article(article_content, language):
+    """Summarize a news article in English, capturing key points in 5-6 sentences."""
+    client = st.session_state["openai_client"]
+
+    # Trim to avoid token overflow while preserving meaningful content
+    truncated_content = article_content[:3000]
+
     message_content = (
-        f"The following is a news article in {language}. Please provide a summary that captures the key points in 6-7 sentences in English.\n\n"
-        f"Article:\n{truncated_content}\n\n"
-        "Summary:"
+        f"The following is a news article written in {language} about Japan-Korea relations. "
+        "Summarize the key points in 5-6 sentences in English. "
+        "Focus on: the main event, the positions of each side, and any notable quotes or data.\n\n"
+        f"Article:\n{truncated_content}\n\nSummary:"
     )
 
-    # Send the request to the OpenAI API
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
-            {"role": "system", "content": "You are an expert news editor who summarizes articles effectively."},
-            {"role": "user", "content": message_content}
+            {
+                "role": "system",
+                "content": "You are a skilled news editor who distills articles into concise, accurate summaries.",
+            },
+            {"role": "user", "content": message_content},
         ],
-        max_tokens=300,  # Reduce max_tokens to avoid overflow
-        temperature=0.5
+        max_tokens=400,
+        temperature=0.4,
     )
 
-    # Extract the summary from the response
-    summary = response["choices"][0]["message"]["content"].strip()
-    return summary
+    return response.choices[0].message.content.strip()

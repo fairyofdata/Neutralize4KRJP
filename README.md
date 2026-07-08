@@ -1,127 +1,133 @@
 **🌐 Available README Versions:**  
-[🇰🇷 한국어 (Korean)](https://github.com/fairyofdata/LLM_NAKOJA/blob/master/README_KR.md) | [🇯🇵 日本語 (Japanese)](https://github.com/fairyofdata/LLM_NAKOJA/blob/master/README_JP.md)  
+[🇰🇷 한국어 (Korean)](./README_KR.md) | [🇯🇵 日本語 (Japanese)](./README_JP.md)
 
-# LLM-Based Korea-Japan Relations Neutral Article Generator 📰🤝🤖
+# LLM-NAKOJA 📰🤝🤖
+### LLM-based Korea-Japan Relations Neutral Article Generator
 
-> **[경요세계(瓊瑤世界)](https://www.seoul.co.kr/news/editOpinion/world-stories/2024/07/12/20240712035005): 'Two Jade Orbs Reflecting Each Other'**  
-‐ Inscription on the two-story bell tower left by astronomer [Park An-Gi](https://encykorea.aks.ac.kr/Article/E0020900) in Shizuoka’s Seikenji Temple, 1643  
-> **[성신교린(誠信交隣)](https://www.donga.com/news/People/article/all/20210416/106434451/1): 'Exchange with Sincerity and Trust'**  
-‐ Written by [Amenomori Hōshū](https://busan.grandculture.net/Contents?local=busan&dataType=01&contents_id=GC04203537) in the book「Kyoryo Seisei」 at Busan Choryang Japanese dormitory, 1728  
----
-
-## **Project Objective**
-
-This project aims to provide a neutral perspective on Korea-Japan relations by crawling and analyzing news articles from both countries. Users can intuitively experience all steps—crawling, classification, summarization, and neutral article generation—via a Streamlit-based interface.  
+> *[瓊瑤世界 (경요세계)](https://www.seoul.co.kr/news/editOpinion/world-stories/2024/07/12/20240712035005): "Two Jade Orbs Reflecting Each Other"*  
+> — Inscription by astronomer [Park An-Gi](https://encykorea.aks.ac.kr/Article/E0020900) at Seikenji Temple, Shizuoka, 1643  
+>
+> *[誠信交隣 (성신교린)](https://www.donga.com/news/People/article/all/20210416/106434451/1): "Exchange with Sincerity and Trust"*  
+> — Written by [Amenomori Hōshū](https://busan.grandculture.net/Contents?local=busan&dataType=01&contents_id=GC04203537) in「Kyoryo Seisei」, 1728
 
 ---
 
-## 📖 **Project Overview**
+## 📌 Overview
 
-- Crawl news articles with specific keywords which means Korea-Japan relations from **[Joongang Ilbo](https://www.joongang.co.kr/)** and **[Yomiuri Shimbun](https://www.yomiuri.co.jp/)**.
-- Expand coverage to include **Joongang, Kyunghyang, Asahi, and Yomiuri**, incorporating political biases from both sides to ensure comprehensive neutrality.
-- Cluster crawled articles by topic and generate neutral articles reflecting multifaceted perspectives using OpenAI API.  
-- The service is built on Streamlit, allowing users to experience each step directly.  
-- **[Preview](/NAKOJA_Preview.png)** the entire process if executing it yourself is cumbersome.  
+NAKOJA is a Streamlit-based pipeline that crawls news articles on Korea-Japan relations from both **Joongang Ilbo (한국)** and **Yomiuri Shimbun (日本)**, clusters them by topic using GPT, and generates a **bilingual neutral article** that explicitly represents both perspectives.
 
----
+The core question this project asks:
 
-## **Key Features**
-
-- **Article Crawling**: Gather article lists and full content from Korean and Japanese media based on specific keywords ("한일" in Korean, "日韓" in Japanese) .  
-- **Data Classification**: Cluster articles by topics for categorization.  
-- **Summarization**: Summarize the core content of selected articles.  
-- **Neutral Article Generation**: Generate articles with neutral perspectives based on the summaries.  
+> *"Can an LLM produce truly balanced journalism by reading both sides simultaneously?"*
 
 ---
 
-## 🛠️ **Tech Stack**
+## 🏗️ Pipeline Architecture
 
-- **Crawling**: Selenium, BeautifulSoup, Pandas  
-- **Text Processing & Clustering**: OpenAI API, HuggingFace  
-- **Neutral Article Generation**: OpenAI API (GPT model)  
-- **Interface**: Streamlit  
-- **Language**: Python 3.8+  
-
----
-
-## 🚀 **Installation & Execution**
-
-1. **Clone the Project**
-   ```bash
-   git clone https://github.com/fairyofdata/LLM_NAKOJA
-   cd LLM_NAKOJA
-   ```
-
-2. **Install Required Libraries**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Run the Streamlit App**
-   ```bash
-   streamlit run main.py
-   ```
-
-   Access the app locally at http://localhost:8501 to explore the features.  
+```
+[Joongang Ilbo 크롤러]    [Yomiuri Shimbun 크롤러]
+         ↓                          ↓
+    Korean articles            Japanese articles
+              ↘                 ↙
+           [Combined DataFrame]
+                    ↓
+        [GPT Topic Classifier]
+          Economy / Politics / Culture
+          Security / History / Other
+                    ↓
+      [Korean-Japanese Pair Selector (GPT)]
+       → finds articles on the same specific event
+                    ↓
+         [Article Summarizer (GPT)]
+          Korean article → English summary
+         Japanese article → English summary
+                    ↓
+       [Neutral Article Generator (GPT)]
+        Bilingual output: 한국어 + 日本語
+```
 
 ---
 
-## 🖥️ **Feature Usage Guide**  
-⚠️ *Note: LLM Prompt optimization is in progress.*  
+## 🔬 Key Design Decisions
 
-### **Set Up Your OpenAI API Key**
-   - This app uses the OpenAI API for functionality.
-   - When you run the app, you will see a field to input your OpenAI API key.  
-   - You can obtain your API key from the [OpenAI API Key Page](https://platform.openai.com/account/api-keys).
+### Why English as the Intermediate Language?
+Summaries are generated in English before neutral article synthesis. This forces the model to step outside both languages' implicit framing and reduces L1-specific bias in the output.
 
-### 1. **Start Crawling**  
-   - Click **"Collect Joongang Articles"** or **"Collect Yomiuri Articles"** to gather news articles.  
-   - Articles matching keywords which means Korea-Japan relations ("한일" in Korean, "日韓" in Japanese) are collected.  
-   - The article count updates in real-time during the process.  
-   - Once crawling completes, the article list is displayed.  
+### Explicit Attribution Prompting
+The neutralizer prompt explicitly instructs GPT to use constructions like *"Joongang Ilbo reported... while Yomiuri Shimbun reported..."* — making the perspective gap visible rather than eliding it.
 
-### 2. **Classify Data**  
-   - Click the **"Classify Headlines"** button to group articles by category.  
-   - Categorized articles appear in table format for user review.  
-
-### 3. **Select Articles for Analysis**  
-   - Choose a category and click **"Select Korea-Japan Article Pair"** to find articles addressing similar topics.  
-
-### 4. **Generate Neutral Article**  
-   - Click the **"Generate Neutral Article"** button to create a neutral article based on selected articles.  
-   - The generated article reflects diverse perspectives to provide balanced insights into bilateral issues.  
+### Modular Pipeline
+Each stage (crawl → classify → pair → summarize → neutralize) is a separate module, making it easy to swap in different models or news sources at any step.
 
 ---
 
-## 📂 **Architecture Explanation**
+## 💻 Tech Stack
 
-- **Crawling Module**: Collects article lists and links from news websites using Selenium and BeautifulSoup, then retrieves full text by accessing individual links.  
-- **Classification Module**: Uses OpenAI API to analyze article titles and categorize them by topic.  
-- **Summarization & Neutral Article Generation Module**: Summarizes selected articles and generates neutral articles through the OpenAI API.  
-- **User Interface (UI)**: Built with Streamlit, providing buttons and visual results for each feature.  
-
----
-
-## 📈 **Performance & Quality Testing**
-
-- Tested across various topics to verify classification and neutral article generation.  
-- Accuracy and quality improvements will be driven by user feedback.  
+| Layer | Technology |
+|---|---|
+| Web Crawling | Selenium + BeautifulSoup |
+| LLM (Classify / Select / Summarize / Generate) | OpenAI GPT-3.5 (SDK v1.x) |
+| UI | Streamlit |
+| Data | Pandas |
 
 ---
 
-## 🔍 **Potential Improvements & Future Features**
+## 🚀 Setup & Run
 
-- **Multilingual Support**: Expand to handle languages beyond Korean and Japanese.  
-- **Real-Time Updates**: Automatically fetch and update articles at regular intervals.  
-- **Enhanced AI Models**: Improve summarization and understanding accuracy by integrating advanced NLP models.  
+### 1. Install dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Set your OpenAI API key
+Create a `.env` file in the project root:
+```
+OPENAI_API_KEY=sk-...
+```
+Or enter it directly in the Streamlit UI when prompted.
+
+### 3. Run
+```bash
+streamlit run main.py
+```
+
+### 4. Usage Flow
+1. **Scrape** — click to collect articles from Joongang and Yomiuri
+2. **Classify** — GPT clusters all titles by topic
+3. **Select pair** — GPT identifies the most topically aligned Korean + Japanese article
+4. **Generate** — read summaries and the neutral bilingual article
+
+> 📸 [Preview the full workflow](./NAKOJA_Preview.png) without running the app
 
 ---
 
-## 💡 **Significance & Business Applications**
+## 📁 Project Structure
 
-This project aims to reconstruct biased news reports between Korea and Japan into neutral perspectives, fostering mutual understanding. It serves as a practical showcase of data science and NLP techniques applied to real-world text processing and generation challenges.  
+```
+LLM_NAKOJA/
+├── main.py                  # Streamlit app entry point
+├── Article_Jungang.py       # Joongang Ilbo Selenium crawler
+├── Article_yomiuri.py       # Yomiuri Shimbun Selenium crawler
+├── Both_loader.py           # CSV loader & DataFrame merger
+├── Classifier.py            # GPT topic classification
+├── Data_selector.py         # GPT Korean-Japanese pair selection
+├── Each_summarizer.py       # GPT article summarization
+├── Final_Neutralizer.py     # GPT neutral article generation
+└── requirements.txt         # Minimal dependency list
+```
 
-**Business Use Cases**:  
-- **Insights from Data Analysis**: Companies can analyze public sentiment on bilateral issues to guide strategy.  
-- **Efficiency Through Automation**: Automate the labor-intensive process of article collection, classification, and summarization.  
-- **Agility in Market Response**: Use real-time data to quickly adapt to shifting public and market trends.  
+---
+
+## ⚙️ Technical Notes
+
+- **OpenAI SDK**: Migrated to `openai>=1.0.0` client API (`client.chat.completions.create`)
+- **ChromeDriver**: Selenium requires a matching ChromeDriver on PATH. Use [ChromeDriver Downloads](https://chromedriver.chromium.org/downloads) or install `webdriver-manager`
+- **Yomiuri paywall**: Some articles may return partial content due to subscription restrictions
+
+---
+
+## 🔗 Author
+
+**Jiheon Baek** — [@fairyofdata](https://github.com/fairyofdata)
+
+Crawling pipeline, OpenAI prompt design, Streamlit UI architecture, SDK v1.x migration.

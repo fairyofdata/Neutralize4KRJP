@@ -1,33 +1,37 @@
-import openai
-import pandas as pd
 import streamlit as st
 
-# Function to generate a neutral article from selected Korean and Japanese articles using OpenAI API
+
 def generate_neutral_article(korean_summary, japanese_summary):
-    # Combine the summaries into a prompt for generating a neutral article
+    """Generate a neutral bilingual article from Korean and Japanese summaries."""
+    client = st.session_state["openai_client"]
+
     message_content = (
-        "The following are summaries of two news articles, one in Korean and one in Japanese, both discussing the same relevant event or topic. "
-        "Please generate a neutral news article that details the key points from both summaries while providing a balanced perspective. "
-        "Ensure that all key points from both the Korean and Japanese summaries are included. Highlight similarities and differences explicitly where relevant. "
-        "Also, include comparisons between the reporting styles of the two articles, such as 'Jung-ang Daily (Korean) reported (key point of Jung-ang Daily's article), while Yomiuri Shimbun (Japanese) reported (key point of Yomiuri Shimbun's article)'.\n\n"
-        "Korean Summary:\n"
-        f"{korean_summary}\n\n"
-        "Japanese Summary:\n"
-        f"{japanese_summary}\n\n"
-        "Please provide the result in two versions: one in Korean and one in Japanese."
+        "Below are summaries of two news articles covering the same Japan-Korea relations topic — "
+        "one from a Korean outlet and one from a Japanese outlet.\n\n"
+        "Write a single neutral news article that:\n"
+        "- Presents the key facts from both sides without bias\n"
+        "- Explicitly highlights where the two reporting perspectives differ\n"
+        "- Uses attributions like 'Joongang Ilbo reported...' and 'Yomiuri Shimbun reported...'\n"
+        "- Provides the result in TWO versions: first in Korean (한국어), then in Japanese (日本語)\n\n"
+        f"Korean Summary:\n{korean_summary}\n\n"
+        f"Japanese Summary:\n{japanese_summary}\n\n"
+        "Neutral Article (Korean then Japanese):"
     )
 
-    # Send the request to the OpenAI API
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",  # Use the latest model
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
         messages=[
-            {"role": "system", "content": "You are an expert journalist skilled in creating balanced and neutral news articles from multiple sources."},
-            {"role": "user", "content": message_content}
+            {
+                "role": "system",
+                "content": (
+                    "You are an experienced bilingual journalist specializing in Japan-Korea relations. "
+                    "You write balanced, factual articles that fairly represent both sides."
+                ),
+            },
+            {"role": "user", "content": message_content},
         ],
-        max_tokens=1500,  # Reduce max_tokens to fit both versions without exceeding token limits
-        temperature=0.5
+        max_tokens=1500,
+        temperature=0.5,
     )
 
-    # Extract the generated neutral articles from the response
-    generated_articles = response["choices"][0]["message"]["content"].strip()
-    return generated_articles
+    return response.choices[0].message.content.strip()
