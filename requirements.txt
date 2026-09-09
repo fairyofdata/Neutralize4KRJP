@@ -1,11 +1,17 @@
-# Core
-openai>=1.0.0
-streamlit>=1.28.0
+# Core & AI
+openai>=1.40.0
+pydantic>=2.7.0
+streamlit>=1.35.0
 python-dotenv>=1.0.0
 
-# Data
+# Data manipulation
 pandas>=2.0.0
 
 # Web crawling
-selenium>=4.0.0
 beautifulsoup4>=4.12.0
+selenium>=4.15.0
+requests>=2.31.0
+
+# Dev & Testing
+pytest>=8.0.0
+pytest-mock>=3.12.0

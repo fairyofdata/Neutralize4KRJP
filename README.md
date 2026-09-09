@@ -1,133 +1,128 @@
-**🌐 Available README Versions:**  
-[🇰🇷 한국어 (Korean)](./README_KR.md) | [🇯🇵 日本語 (Japanese)](./README_JP.md)
-
 # LLM-NAKOJA 📰🤝🤖
 ### LLM-based Korea-Japan Relations Neutral Article Generator
 
 > *[瓊瑤世界 (경요세계)](https://www.seoul.co.kr/news/editOpinion/world-stories/2024/07/12/20240712035005): "Two Jade Orbs Reflecting Each Other"*  
 > — Inscription by astronomer [Park An-Gi](https://encykorea.aks.ac.kr/Article/E0020900) at Seikenji Temple, Shizuoka, 1643  
 >
-> *[誠信交隣 (성신교린)](https://www.donga.com/news/People/article/all/20210416/106434451/1): "Exchange with Sincerity and Trust"*  
-> — Written by [Amenomori Hōshū](https://busan.grandculture.net/Contents?local=busan&dataType=01&contents_id=GC04203537) in「Kyoryo Seisei」, 1728
+> *[誠信交隣 (성신교린)](https://www.donga.com/news/People/article/all/20210416/106434451/1): "Exchange with Sincerity and Mutual Trust"*  
+> — Written by [Amenomori Hōshū](https://busan.grandculture.net/Contents?local=busan&dataType=01&contents_id=GC04203537) in *Kyōryō Seisei*, 1728
+
+---
+
+**🌐 Available README Versions:**  
+[🇰🇷 한국어 (Korean)](./README_KR.md) | [🇯🇵 日本語 (Japanese)](./README_JP.md) | [🌐 English](./README.md)
 
 ---
 
 ## 📌 Overview
 
-NAKOJA is a Streamlit-based pipeline that crawls news articles on Korea-Japan relations from both **Joongang Ilbo (한국)** and **Yomiuri Shimbun (日本)**, clusters them by topic using GPT, and generates a **bilingual neutral article** that explicitly represents both perspectives.
+**LLM-NAKOJA** is a dual-perspective media synthesis pipeline that ingests news articles on Korea-Japan relations from both **JoongAng Ilbo (Korea)** and **Yomiuri Shimbun (Japan)**, clusters them by topic, and produces a **bilingual neutral article** that explicitly reconciles both perspectives.
 
-The core question this project asks:
+The foundational research question:
+> *"Can an LLM produce truly balanced journalism by reading and cross-analyzing both national narratives simultaneously?"*
 
-> *"Can an LLM produce truly balanced journalism by reading both sides simultaneously?"*
+---
+
+## 🔬 Key Engineering & Design Decisions
+
+### 1. English as the Neutral Intermediate Language (L1 Bias Elimination)
+Generating direct translations or synthesizing directly between Korean and Japanese carries high risks of implicit framing bias, nationalistic word choice, and emotional undertones.  
+NAKOJA utilizes **English as an intermediate lingua franca**. Facts and subjective assertions are distilled into English first, neutralizing first-language (L1) framing before the final bilingual article is produced.
+
+### 2. Pydantic v2 Structured Outputs
+Departing from fragile regex and newline splitting, NAKOJA enforces OpenAI's `beta.chat.completions.parse` with **Pydantic schemas**.  
+This guarantees zero parsing failures, enforces type safety, and extracts structured comparative insights (shared facts, Korean emphasis, Japanese emphasis, and framing divergence).
+
+### 3. Clean Modular Architecture
+The codebase cleanly separates UI from core business logic:
+- `src/nakoja/crawler/`: Headless, robust web scraping modules.
+- `src/nakoja/pipeline/`: Pure Python LLM pipelines independent of any UI framework.
+- `src/nakoja/schemas.py`: Domain validation models.
+- `src/nakoja/ui/`: Rich Streamlit web dashboard.
+- `tests/`: Complete unit tests with mock OpenAI clients.
 
 ---
 
 ## 🏗️ Pipeline Architecture
 
 ```
-[Joongang Ilbo 크롤러]    [Yomiuri Shimbun 크롤러]
-         ↓                          ↓
-    Korean articles            Japanese articles
-              ↘                 ↙
-           [Combined DataFrame]
-                    ↓
-        [GPT Topic Classifier]
-          Economy / Politics / Culture
-          Security / History / Other
-                    ↓
-      [Korean-Japanese Pair Selector (GPT)]
-       → finds articles on the same specific event
-                    ↓
-         [Article Summarizer (GPT)]
-          Korean article → English summary
-         Japanese article → English summary
-                    ↓
-       [Neutral Article Generator (GPT)]
-        Bilingual output: 한국어 + 日本語
+[JoongAng Ilbo Scraper]             [Yomiuri Shimbun Scraper]
+          ↓                                     ↓
+    Korean Articles                       Japanese Articles
+          ↘                                     ↙
+            [Combined Dataset / Sample Data in data/]
+                                ↓
+                 [1. Topic Classifier (GPT)]
+              Diplomacy / Security / Economy / etc.
+                                ↓
+               [2. Pair Selector (Structured)]
+              Matches identical bilateral events
+                                ↓
+             [3. Intermediate English Summarizer]
+             Korean Summary        Japanese Summary
+             (Strips L1 national framing bias)
+                                ↓
+          [4. Bilingual Neutral Article Synthesizer]
+           - Mutual Facts (Shared baseline)
+           - Contrasting Emphases (KR vs JP)
+           - Framing Divergence Analysis
+           - 🇰🇷 Korean Neutral Article
+           - 🇯🇵 Japanese Neutral Article
 ```
 
 ---
 
-## 🔬 Key Design Decisions
+## 🛠️ Tech Stack
 
-### Why English as the Intermediate Language?
-Summaries are generated in English before neutral article synthesis. This forces the model to step outside both languages' implicit framing and reduces L1-specific bias in the output.
-
-### Explicit Attribution Prompting
-The neutralizer prompt explicitly instructs GPT to use constructions like *"Joongang Ilbo reported... while Yomiuri Shimbun reported..."* — making the perspective gap visible rather than eliding it.
-
-### Modular Pipeline
-Each stage (crawl → classify → pair → summarize → neutralize) is a separate module, making it easy to swap in different models or news sources at any step.
-
----
-
-## 💻 Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Web Crawling | Selenium + BeautifulSoup |
-| LLM (Classify / Select / Summarize / Generate) | OpenAI GPT-3.5 (SDK v1.x) |
-| UI | Streamlit |
-| Data | Pandas |
+- **Language:** Python 3.10+
+- **LLM:** OpenAI API (`gpt-4o-mini`, `gpt-4o`)
+- **Validation:** Pydantic v2 (Structured Outputs)
+- **Scraping:** Selenium (Headless Chrome), BeautifulSoup4
+- **UI:** Streamlit
+- **Testing:** Pytest, Pytest-mock
+- **Packaging:** PEP 621 (`pyproject.toml`)
 
 ---
 
-## 🚀 Setup & Run
+## 🚀 Quick Start
 
-### 1. Install dependencies
+### 1. Clone & Setup
 ```bash
+git clone https://github.com/fairyofdata/LLM_NAKOJA.git
+cd LLM_NAKOJA
 pip install -r requirements.txt
 ```
 
-### 2. Set your OpenAI API key
+### 2. Configure Environment
 Create a `.env` file in the project root:
+```env
+OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_MODEL=gpt-4o-mini
 ```
-OPENAI_API_KEY=sk-...
-```
-Or enter it directly in the Streamlit UI when prompted.
 
-### 3. Run
+### 3. Launch App
 ```bash
 streamlit run main.py
 ```
+Open `http://localhost:8501` in your browser.
 
-### 4. Usage Flow
-1. **Scrape** — click to collect articles from Joongang and Yomiuri
-2. **Classify** — GPT clusters all titles by topic
-3. **Select pair** — GPT identifies the most topically aligned Korean + Japanese article
-4. **Generate** — read summaries and the neutral bilingual article
-
-> 📸 [Preview the full workflow](./NAKOJA_Preview.png) without running the app
+> **💡 Quick Demo Mode:**  
+> Click **[샘플 데이터셋 즉시 로드 (Quick Demo)]** to explore the entire pipeline immediately using pre-collected datasets without needing to scrape live sites.
 
 ---
 
-## 📁 Project Structure
+## 🧪 Running Unit Tests
 
+```bash
+pytest tests/ -v
 ```
-LLM_NAKOJA/
-├── main.py                  # Streamlit app entry point
-├── Article_Jungang.py       # Joongang Ilbo Selenium crawler
-├── Article_yomiuri.py       # Yomiuri Shimbun Selenium crawler
-├── Both_loader.py           # CSV loader & DataFrame merger
-├── Classifier.py            # GPT topic classification
-├── Data_selector.py         # GPT Korean-Japanese pair selection
-├── Each_summarizer.py       # GPT article summarization
-├── Final_Neutralizer.py     # GPT neutral article generation
-└── requirements.txt         # Minimal dependency list
-```
+Mocked tests run entirely offline with zero API token consumption.
 
 ---
 
-## ⚙️ Technical Notes
+## 👤 Author
 
-- **OpenAI SDK**: Migrated to `openai>=1.0.0` client API (`client.chat.completions.create`)
-- **ChromeDriver**: Selenium requires a matching ChromeDriver on PATH. Use [ChromeDriver Downloads](https://chromedriver.chromium.org/downloads) or install `webdriver-manager`
-- **Yomiuri paywall**: Some articles may return partial content due to subscription restrictions
-
----
-
-## 🔗 Author
-
-**Jiheon Baek** — [@fairyofdata](https://github.com/fairyofdata)
-
-Crawling pipeline, OpenAI prompt design, Streamlit UI architecture, SDK v1.x migration.
+**Jiheon Baek (백지헌)**  
+- Software Engineer / AI Engineer (Okayama, Japan)  
+- GitHub: [@fairyofdata](https://github.com/fairyofdata)  
+- LinkedIn: [in/hjbaek](https://www.linkedin.com/in/hjbaek/)

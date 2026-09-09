@@ -1,23 +1,53 @@
 # Python
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*$py.class
+*.so
 .Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Environment
+# Virtual Environments
 .env
+.venv
+env/
 venv/
-.venv/
-myvenv/
+ENV/
+env.bak/
+venv.bak/
 
-# Scraped data (generated at runtime)
-jungang_articles_converted.csv
-yomiuri_articles_converted.csv
-combined_articles_with_labels.csv
-filtered_articles_with_detailed_labels.csv
-
-# OS / IDE
-.DS_Store
-Thumbs.db
+# IDE & Editors
 .idea/
 .vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Local dynamic data / outputs (keep sample data in data/)
+output/
+temp/
