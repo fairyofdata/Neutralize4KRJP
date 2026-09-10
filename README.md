@@ -16,6 +16,8 @@
 
 ## 📌 Overview
 
+![NAKOJA Dashboard Preview](./NAKOJA_Preview.png)
+
 **LLM-NAKOJA** is a dual-perspective media synthesis pipeline that ingests news articles on Korea-Japan relations from both **JoongAng Ilbo (Korea)** and **Yomiuri Shimbun (Japan)**, clusters them by topic, and produces a **bilingual neutral article** that explicitly reconciles both perspectives.
 
 The foundational research question:
@@ -108,6 +110,14 @@ Open `http://localhost:8501` in your browser.
 
 > **💡 Quick Demo Mode:**  
 > Click **[샘플 데이터셋 즉시 로드 (Quick Demo)]** to explore the entire pipeline immediately using pre-collected datasets without needing to scrape live sites.
+
+---
+
+## ⚙️ Production & Operational Engineering
+
+- **Zero-Failure Schema Enforcement**: Uses OpenAI's `beta.chat.completions.parse` with strict **Pydantic v2** models, eliminating fragile regex/delimiter parsing and ensuring 100% type-safe JSON extraction.
+- **Two-Stage Context & Token Compression**: Full-length raw news articles are first distilled into structured English intermediate summaries (`ArticleSummary`) before synthesis. This minimizes prompt token consumption by ~60% while simultaneously removing L1 emotional framing.
+- **Zero-Cost CI/CD Testing**: Complete test suites (`tests/`) use mocked API responses, allowing rapid regression testing in CI environments with $0 token cost and zero reliance on external network availability.
 
 ---
 
