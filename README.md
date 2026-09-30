@@ -33,7 +33,7 @@ NAKOJA utilizes **English as an intermediate lingua franca**. Facts and subjecti
 
 ### 2. Pydantic v2 Structured Outputs
 Departing from fragile regex and newline splitting, NAKOJA enforces OpenAI's `beta.chat.completions.parse` with **Pydantic schemas**.  
-This guarantees zero parsing failures, enforces type safety, and extracts structured comparative insights (shared facts, Korean emphasis, Japanese emphasis, and framing divergence).
+This removes hand-written parsing, enforces types at the schema level, and extracts structured comparative insights (shared facts, Korean emphasis, Japanese emphasis, and framing divergence).
 
 ### 3. Clean Modular Architecture
 The codebase cleanly separates UI from core business logic:
@@ -115,8 +115,8 @@ Open `http://localhost:8501` in your browser.
 
 ## ⚙️ Production & Operational Engineering
 
-- **Zero-Failure Schema Enforcement**: Uses OpenAI's `beta.chat.completions.parse` with strict **Pydantic v2** models, eliminating fragile regex/delimiter parsing and ensuring 100% type-safe JSON extraction.
-- **Two-Stage Context & Token Compression**: Full-length raw news articles are first distilled into structured English intermediate summaries (`ArticleSummary`) before synthesis. This minimizes prompt token consumption by ~60% while simultaneously removing L1 emotional framing.
+- **Schema-Enforced Outputs**: Uses OpenAI's `beta.chat.completions.parse` with strict **Pydantic v2** models instead of regex/delimiter parsing. The unit tests (10, run against a mock OpenAI client) cover schema serialization and pipeline branches; the parse failure rate against the live API has not been measured.
+- **Two-Stage Context Compression**: Full-length raw news articles are first distilled into structured English intermediate summaries (`ArticleSummary`) before synthesis, so the synthesis prompt carries summaries instead of full articles. This step is also designed to reduce L1 emotional framing.
 - **Zero-Cost CI/CD Testing**: Complete test suites (`tests/`) use mocked API responses, allowing rapid regression testing in CI environments with $0 token cost and zero reliance on external network availability.
 
 ---

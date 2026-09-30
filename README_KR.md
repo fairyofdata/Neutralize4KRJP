@@ -33,7 +33,7 @@ NAKOJA는 기사를 바로 합성하지 않고, **제3의 중립 언어인 영�
 
 ### 2. OpenAI Pydantic Structured Outputs 기반 무결성 확보
 줄글 텍스트 파싱(`split('\n')`, 정규표현식)에 의존하던 구형 구조를 탈피하고, OpenAI의 최신 `beta.chat.completions.parse`와 **Pydantic v2 스키마**를 결합했습니다.
-이를 통해 파싱 실패율 0%를 달성하고, 양국 관점 대조표(Contrast Matrix)를 정형 데이터로 완벽하게 추출합니다.
+직접 작성한 파싱 로직을 없애고, 양국 관점 대조표(Contrast Matrix)를 스키마로 타입이 보장된 정형 데이터로 추출합니다.
 
 ### 3. 클린 아키텍처 (Clean Architecture) 분리
 기존 Streamlit과 강하게 결합되어 있던 비즈니스 로직을 `src/nakoja/` 하위로 완전 격리했습니다.
@@ -118,8 +118,8 @@ streamlit run main.py
 
 ## ⚙️ 프로덕션 엔지니어링 및 실운영 설계 (Production & Operations)
 
-- **스키마 무결성 보장 (Zero-Failure)**: 취약한 줄바꿈 분리나 정규표현식 대신 OpenAI의 공식 `beta.chat.completions.parse`와 **Pydantic v2** 스키마를 결합하여, 런타임 JSON 파싱 실패율 0%와 타입 안전성을 보장합니다.
-- **2단계 컨텍스트 압축 및 토큰 비용 최적화**: 원문 기사 전체를 합성 모델에 그대로 투입하지 않고, 1차 정형 영어 요약(`ArticleSummary`, 팩트와 입장 분리)으로 먼저 압축합니다. 이를 통해 프롬프트 토큰 소모를 ~60% 절감하는 동시에 모국어 프레이밍 편향을 원천 차단합니다.
+- **스키마로 출력 강제**: 줄바꿈 분리나 정규표현식 대신 OpenAI의 공식 `beta.chat.completions.parse`와 **Pydantic v2** 스키마를 사용합니다. 단위 테스트 10건(Mock OpenAI 클라이언트)으로 스키마 직렬화와 파이프라인 분기를 검증하며, 실제 API에서의 파싱 실패율은 측정하지 않았습니다.
+- **2단계 컨텍스트 압축**: 원문 기사 전체를 합성 모델에 그대로 투입하지 않고, 1차 정형 영어 요약(`ArticleSummary`, 팩트와 입장 분리)으로 먼저 압축한 뒤 합성합니다. 이 단계는 모국어 프레이밍 편향을 줄이는 것도 목표로 합니다.
 - **API 비용 $0의 독립형 CI/CD 테스트**: 단위 테스트(`tests/`) 전체가 Mock OpenAI 클라이언트 기반으로 격리되어 있어, 외부 API 장애나 네트워크 환경과 무관하게 비용 $0으로 안정적인 회귀 테스트를 수행합니다.
 
 ---
@@ -129,7 +129,7 @@ streamlit run main.py
 ```bash
 pytest tests/ -v
 ```
-Mock OpenAI 클라이언트가 내장되어 있어, API 호출 요금 없이도 스키마 직렬화와 파이프라인 분기 로직을 100% 검증할 수 있습니다.
+Mock OpenAI 클라이언트가 내장되어 있어, API 호출 요금 없이 스키마 직렬화와 파이프라인 분기 로직을 검증할 수 있습니다.
 
 ---
 
