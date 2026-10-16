@@ -12,6 +12,8 @@
 **🌐 Available README Versions:**  
 [🇰🇷 한국어 (Korean)](./README_KR.md) | [🇯🇵 日本語 (Japanese)](./README_JP.md) | [🌐 English](./README.md)
 
+*Individual project (Oct–Nov 2024) building on the SW021 "ChatGPT for Business" program at Sungshin Women's University.*
+
 ---
 
 ## 📌 Overview

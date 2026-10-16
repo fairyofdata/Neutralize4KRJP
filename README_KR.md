@@ -11,6 +11,8 @@
 **🌐 언어별 README:**  
 [🇰🇷 한국어 (Korean)](./README_KR.md) | [🇯🇵 日本語 (Japanese)](./README_JP.md) | [🌐 English](./README.md)
 
+*2024년 10~11월 개인 프로젝트. 성신여자대학교 SW021 「ChatGPT for Business」 과정에서 배운 내용의 연장선에서 만들었습니다.*
+
 ---
 
 ## 📌 프로젝트 기획 및 문제의식

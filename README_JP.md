@@ -11,6 +11,8 @@
 **🌐 各言語のREADME:**  
 [🇰🇷 한국어 (Korean)](./README_KR.md) | [🇯🇵 日本語 (Japanese)](./README_JP.md) | [🌐 English](./README.md)
 
+*2024年10〜11月の個人プロジェクト。誠信女子大学 SW021「ChatGPT for Business」課程で学んだ内容の発展として制作しました。*
+
 ---
 
 ## 📌 プロジェクト概要
