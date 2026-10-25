@@ -103,7 +103,7 @@ def run_app():
         )
         st.divider()
         st.markdown(
-            "[GitHub Repository](https://github.com/fairyofdata/LLM_NAKOJA)  \n"
+            "[GitHub Repository](https://github.com/fairyofdata/Neutralize4KRJP)  \n"
             "Developed by **Jiheon Baek**"
         )
 

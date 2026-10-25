@@ -91,8 +91,8 @@ NAKOJA는 기사를 바로 합성하지 않고, **제3의 중립 언어인 영�
 
 ### 1. 저장소 클론 및 환경 설정
 ```bash
-git clone https://github.com/fairyofdata/LLM_NAKOJA.git
-cd LLM_NAKOJA
+git clone https://github.com/fairyofdata/Neutralize4KRJP.git
+cd Neutralize4KRJP
 ```
 
 ### 2. 의존성 설치

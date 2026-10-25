@@ -92,8 +92,8 @@ UIとビジネスロジックを明確に分離しました：
 
 ### 1. クローンと依存関係のインストール
 ```bash
-git clone https://github.com/fairyofdata/LLM_NAKOJA.git
-cd LLM_NAKOJA
+git clone https://github.com/fairyofdata/Neutralize4KRJP.git
+cd Neutralize4KRJP
 pip install -r requirements.txt
 ```
 

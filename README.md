@@ -92,8 +92,8 @@ The codebase cleanly separates UI from core business logic:
 
 ### 1. Clone & Setup
 ```bash
-git clone https://github.com/fairyofdata/LLM_NAKOJA.git
-cd LLM_NAKOJA
+git clone https://github.com/fairyofdata/Neutralize4KRJP.git
+cd Neutralize4KRJP
 pip install -r requirements.txt
 ```
 
