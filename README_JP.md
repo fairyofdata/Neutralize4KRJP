@@ -116,7 +116,7 @@ pytest
 
 ## 作者
 
-**백지헌 (Jiheon Baek)** · AI エンジニア（岡山）  
+**백지헌 (Jiheon Baek)** · ソフトウェアエンジニア（岡山）  
 GitHub [@fairyofdata](https://github.com/fairyofdata) · LinkedIn [in/hjbaek](https://www.linkedin.com/in/hjbaek/)
 
 ## ライセンス

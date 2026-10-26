@@ -116,7 +116,7 @@ pytest
 
 ## 만든 사람
 
-**백지헌 (Jiheon Baek)** · AI 엔지니어 (일본 오카야마)  
+**백지헌 (Jiheon Baek)** · 소프트웨어 엔지니어 (일본 오카야마)  
 GitHub [@fairyofdata](https://github.com/fairyofdata) · LinkedIn [in/hjbaek](https://www.linkedin.com/in/hjbaek/)
 
 ## 라이선스

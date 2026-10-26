@@ -116,7 +116,7 @@ The four CSV files in `data/` are articles collected from the JoongAng Ilbo and 
 
 ## Author
 
-**Jiheon Baek (백지헌)** · AI engineer (Okayama, Japan)  
+**Jiheon Baek (백지헌)** · Software engineer (Okayama, Japan)  
 GitHub [@fairyofdata](https://github.com/fairyofdata) · LinkedIn [in/hjbaek](https://www.linkedin.com/in/hjbaek/)
 
 ## License
