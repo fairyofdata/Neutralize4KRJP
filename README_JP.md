@@ -1,4 +1,10 @@
-# LLMベース日韓関係中立記事自動生成システム (LLM-NAKOJA) 📰🤝🤖
+<!-- 原本: README_KR.md（韓国語版が原本、英語・日本語は翻訳） · 同期: 2026-10-26 -->
+
+# Neutralize4KRJP — 日韓両国の報道から書く中立記事 (LLM-NAKOJA)
+
+[English](README.md) · [한국어](README_KR.md) · [日本語](README_JP.md)
+
+[![tests](https://github.com/fairyofdata/Neutralize4KRJP/actions/workflows/tests.yml/badge.svg)](https://github.com/fairyofdata/Neutralize4KRJP/actions/workflows/tests.yml)
 
 > **[瓊瑤世界 (けいようせかい)](https://www.seoul.co.kr/news/editOpinion/world-stories/2024/07/12/20240712035005) : 「二つの玉が互いを照らし合う」**  
 > ‐ 1643年 朝鮮通信使の天文学者 [朴安期 (パク・アンギ)](https://encykorea.aks.ac.kr/Article/E0020900) が静岡市清見寺の鐘楼額に遺した言葉  
@@ -6,135 +12,113 @@
 > **[誠信交隣 (せいしんこうりん)](https://www.donga.com/news/People/article/all/20210416/106434451/1) : 「誠実と信頼をもって互いに交わる」**  
 > ‐ 1728年 対馬藩の儒学者 [雨森芳洲 (あめのもり ほうしゅう)](https://busan.grandculture.net/Contents?local=busan&dataType=01&contents_id=GC04203537) が釜山草梁倭館で著した『交隣提醒』の言葉
 
----
+中央日報と読売新聞が同じ事案を扱った記事を組み合わせ、共通の事実と両国の強調点の違いを分けて書いた**日本語・韓国語の中立記事**を LLM で生成するパイプラインです。
 
-**🌐 各言語のREADME:**  
-[🇰🇷 한국어 (Korean)](./README_KR.md) | [🇯🇵 日本語 (Japanese)](./README_JP.md) | [🌐 English](./README.md)
-
-*2024年10〜11月の個人プロジェクト。誠信女子大学 SW021「ChatGPT for Business」課程で学んだ内容の発展として制作しました。*
-
----
-
-## 📌 プロジェクト概要
+*2024年10〜11月の個人プロジェクト。誠信女子大学 SW021「ChatGPT for Business」課程で学んだ内容の発展として制作しました。アプリ名は LLM-NAKOJA、リポジトリの旧名は `LLM_NAKOJA` です。*
 
 ![NAKOJA ダッシュボード プレビュー](./NAKOJA_Preview.png)
 
-日韓両国の外交、歴史、経済などの重要課題は、それぞれの国内メディアのフレーミングや国益優先の視点により、対立的な論調で報道されることが少なくありません。
+## 問題意識
 
-> *「大規模言語モデル(LLM)は両国メディアの報道を同時に比較分析し、相互の偏向を排した真に客観的な報道を実現できるか？」*
+日韓の外交・歴史・経済の課題は、それぞれの国内メディアのフレーミングによって食い違う形で報道されることが少なくありません。
 
-**LLM-NAKOJA** は、韓国メディア（**中央日報**）と日本メディア（**読売新聞**）による同一事案の報道を収集・分析し、客観的な共通事実（Common Facts）と両国の視点の相違（Divergence）を対照した上で、**日本語と韓国語の双方でバランスの取れた中立記事を自動合成するAIパイプライン**です。
+> *「言語モデルが両国の報道を一緒に読んで比較分析すれば、どちらにも偏らない記事を書けるか？」*
 
----
+これに答えるには「中立かどうか」を測る方法が必要ですが、このリポジトリはまだその測定まで進んでいません（下の[限界](#限界)）。
 
-## 🔬 主な設計思想と技術的決定 (Key Engineering Decisions)
+## 設計上の判断
 
-### 1. なぜ中間言語として英語（English）を採用したのか？ (L1バイアスの除去)
-韓国語と日本語の原文には、語彙の選択や表現のニュアンスにそれぞれの国家的感情や暗黙のフレーミング（L1 Bias）が深く組み込まれています。  
-NAKOJAは直接的な相互翻訳や要約を行わず、**中立的な第3言語である英語で一次事実と主観的主張を分離・要約**します。この中間ステップを挟むことで、母語特有のバイアスを効果的に除去します。
+### 1. 中間言語として英語を経由する
+韓国語・日本語の原文には、語の選び方や語調にそれぞれの国の感情や暗黙のフレーミングが含まれています。そこで記事を直接合成せず、まず**英語で事実（facts）と主張（positions）を分けて要約**し、その要約から合成します。
+母語のフレーミングを取り除くための**設計上の意図**であり、実際に偏りが減ったかどうかは測定していません。
 
-### 2. OpenAI Structured Outputs (Pydantic v2) による出力の堅牢化
-不安定な正規表現や文字列分割への依存を廃止し、OpenAIの `beta.chat.completions.parse` と **Pydantic スキーマ** を全面導入しました。  
-手書きのパース処理をなくし、両国の論点対照表（Contrast Matrix）をスキーマで型を保証した形で抽出します。
+### 2. 出力は Pydantic スキーマで受け取る
+改行分割や正規表現の代わりに、OpenAI の `beta.chat.completions.parse` と **Pydantic v2** スキーマを使います。手書きのパース処理がなくなり、両国の視点の対照（共通の事実 / 韓国側の強調 / 日本側の強調 / フレーミングの違い）が型の決まったデータとして得られます。実際の API でのパース失敗率は測定していません。
 
-### 3. クリーンアーキテクチャによる関心の分離
-UIとビジネスロジックを明確に分離しました：
-- `src/nakoja/crawler/`: ヘッドレスブラウザ対応のスクレイピングモジュール
-- `src/nakoja/pipeline/`: UIに依存しない純粋なPython LLMパイプライン
-- `src/nakoja/schemas.py`: ドメインモデルのバリデーション
-- `src/nakoja/ui/`: 洗練されたStreamlitダッシュボード
-- `tests/`: Mockを用いたユニットテストスイート
+### 3. 画面とロジックを分ける
+- `src/nakoja/crawler/`: Selenium（ヘッドレス Chrome）のクローラー
+- `src/nakoja/pipeline/`: Streamlit に依存しない LLM パイプライン（分類 → 組み合わせ → 英語要約 → 合成）
+- `src/nakoja/schemas.py`: 出力スキーマ
+- `src/nakoja/ui/`: Streamlit の画面
+- `tests/`: OpenAI クライアントをモックにした単体テスト
 
----
-
-## 🏗️ システムパイプライン
+## パイプライン
 
 ```
-[中央日報スクレイパー]                 [読売新聞スクレイパー]
-          ↓                                     ↓
-     韓国記事データ                         日本記事データ
-          ↘                                     ↙
-             [統合データセット / data/ 内のサンプルデータ]
-                                ↓
-                 [1. トピック分類器 (Classifier)]
-                 外交 / 安全保障 / 経済 / 歴史 など
-                                ↓
-                [2. 記事ペア選定器 (Selector)]
-                同一の事案・首脳会談を扱った記事を照合
-                                ↓
-               [3. 中間英語要約 (Intermediate English)]
-               韓国記事要約           日本記事要約
-               (L1フレーミング・感情的バイアスの排除)
-                                ↓
-          [4. 視点対照と中立記事合成 (Neutralizer)]
-           - 共通事実 (Shared Facts)
-           - 両国の強調点の対照 (KR vs JP)
-           - フレーミング乖離分析 (Divergence Analysis)
-           - 🇰🇷 韓国語版 中立記事
-           - 🇯🇵 日本語版 中立記事
+[中央日報クローラー (Selenium)]        [読売新聞クローラー (Selenium)]
+           ↓                                      ↓
+     韓国の記事                               日本の記事
+           ↘                                      ↙
+             [統合データセット / サンプルデータ (data/)]
+                               ↓
+                 [1. トピック分類 (GPT)]
+               外交 / 安全保障 / 経済 / 歴史 / 文化 など
+                               ↓
+               [2. 日韓記事の組み合わせ (構造化出力)]
+               同じ首脳会談・事案を扱った記事どうし
+                               ↓
+            [3. 英語の中間要約]
+             韓国記事の要約       日本記事の要約
+             (母語のフレーミングを除くよう指示)
+                               ↓
+         [4. 視点の対照と中立記事の合成]
+          - 共通の事実
+          - 両国の強調点の対比
+          - フレーミングの違いの分析
+          - 🇰🇷 韓国語の中立記事
+          - 🇯🇵 日本語の中立記事
 ```
 
----
+## 技術スタック
 
-## 🛠️ 技術スタック
+- Python 3.10+、OpenAI API（既定は `gpt-4o-mini`、`.env` の `OPENAI_MODEL` で変更）、Pydantic v2
+- Selenium（ヘッドレス Chrome）、BeautifulSoup4、Streamlit
+- pytest、pytest-mock、`pyproject.toml`（PEP 621）
 
-- **Language:** Python 3.10+
-- **LLM Engine:** OpenAI API (`gpt-4o-mini`, `gpt-4o`)
-- **Schema & Validation:** Pydantic v2 (Structured Outputs)
-- **Web Scraping:** Selenium (Headless Chrome), BeautifulSoup4
-- **UI:** Streamlit
-- **Testing:** Pytest, Pytest-mock
-- **Packaging:** PEP 621 (`pyproject.toml`)
+## クイックスタート
 
----
-
-## 🚀 クイックスタート
-
-### 1. クローンと依存関係のインストール
 ```bash
 git clone https://github.com/fairyofdata/Neutralize4KRJP.git
 cd Neutralize4KRJP
 pip install -r requirements.txt
 ```
 
-### 2. 環境変数の設定
-プロジェクトルートに `.env` ファイルを作成します：
+ルートに `.env` ファイルを作り、OpenAI API キーを入れます。
 ```env
 OPENAI_API_KEY=your_openai_api_key_here
 OPENAI_MODEL=gpt-4o-mini
 ```
 
-### 3. アプリ起動
 ```bash
 streamlit run main.py
 ```
-ブラウザで `http://localhost:8501` にアクセスします。
+ブラウザで `http://localhost:8501` を開きます。上部の **[샘플 데이터셋 즉시 로드]**（サンプルデータを読み込む）ボタンを押すと、クロールせずに `data/` の記事でパイプライン全体を試せます。分類・組み合わせ・要約・合成は API を呼ぶため、キーは必要です。
 
-> **💡 ワンクリックデモモード (Quick Demo):**  
-> 上部の **[샘플 데이터셋 즉시 로드 (Quick Demo)]** ボタンを押すと、収集済みのサンプルデータを用いて、スクレイピングなしで直ちに全パイプラインを体験できます。
-
----
-
-## ⚙️ プロダクションエンジニアリングと実運用設計 (Production & Operations)
-
-- **スキーマによる出力の強制**: 改行分割や正規表現の代わりに、OpenAI公式の`beta.chat.completions.parse`と**Pydantic v2**スキーマを採用。単体テスト10件（Mock OpenAI クライアント使用）でスキーマの直列化とパイプラインの分岐を検証しています。実APIでのパース失敗率は未計測です。
-- **2段階コンテキスト圧縮**: 長文のニュース記事全文をそのまま合成モデルに入力せず、1次中間英語要約（`ArticleSummary`、事実と主張の分離）に圧縮してから合成します。この段階は、母語特有のフレーミングを減らすことも狙いとしています。
-- **コスト$0の完全オフラインCI/CDテスト**: すべての単体テスト（`tests/`）はMock OpenAIクライアントを介して実行されるため、外部APIの稼働状況やレート制限に影響されず、トークンコスト$0で安全かつ高速なリグレッションテストが可能です。
-
----
-
-## 🧪 テストの実行
+## テスト
 
 ```bash
-pytest tests/ -v
+pytest
 ```
-Mock OpenAI クライアントが組み込まれており、API料金なしでオフラインにて動作検証可能です。
+- 単体テスト 10 件。OpenAI クライアントをモックにして、**スキーマのシリアライズとパイプラインの分岐**を確認します。API キーもネットワークも不要で、費用はかかりません。
+- LLM 出力の品質（事実の正確さ、中立性）はこのテストでは測りません。
+- push のたびに GitHub Actions で同じテストを実行します（テストのみ、デプロイなし）。
 
----
+## データ
 
-## 👤 開発者 (Author)
+`data/` の CSV 4 つは、2024-11-23 に中央日報・読売新聞のウェブサイトから収集した記事です（中央日報 23 件、読売新聞 25 件のうち本文があるもの 13 件）。デモとテストのための少量のサンプルで、記事の著作権は各新聞社にあります。再配布や他の用途への利用はしないでください。
 
-**Jiheon Baek (白 智憲 / ペク・ジホン)**  
-- Software Engineer / AI Engineer (日本・岡山県 在住)  
-- GitHub: [@fairyofdata](https://github.com/fairyofdata)  
-- LinkedIn: [in/hjbaek](https://www.linkedin.com/in/hjbaek/)
+## 限界
+
+- **中立性は測定していません。** 英語の中間要約が偏りを減らすのか、合成記事が実際にバランスが取れているのかについての評価（人による評価や基準データ）はありません。現在の出力は「中立を目指すよう設計した出力」です。
+- LLM が原文にない事実を付け加えていないかを、コードで検証していません。
+- 新聞社 2 社、収集日 1 日分のサンプルです。新聞社の選び方そのものが結果に影響します。
+- クローラーは 2024年11月時点のサイト構造に合わせているため、サイトが変わると動かない可能性があります。
+
+## 作者
+
+**백지헌 (Jiheon Baek)** · AI エンジニア（岡山）  
+GitHub [@fairyofdata](https://github.com/fairyofdata) · LinkedIn [in/hjbaek](https://www.linkedin.com/in/hjbaek/)
+
+## ライセンス
+
+MIT — [LICENSE](LICENSE)。`data/` の記事本文はこのライセンスの対象外です。
