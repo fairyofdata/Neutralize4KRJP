@@ -20,6 +20,10 @@ baseline:
 
 blindspot:
   min_blocs: 3              # 서로 다른 블록 N개 이상이 보도했을 때만 공백 후보
+  # 내가 실제로 접하는 언론의 범위. 한국과 일본을 **하나의 환경**으로 본다.
+  # 공백 판정은 AND — 둘 다 안 다뤘을 때만 공백이다. 한국이 놓쳤어도 일본이
+  # 다뤘으면 이미 접한 것이므로 공백이 아니다 (ADR 0005).
+  home_media: ["KR", "JP"]
 
 budget:
   max_llm_calls_per_day: 40

@@ -76,35 +76,80 @@ def _coverage_line(cluster: Cluster, articles: Mapping[str, Article],
     return " ".join(parts)
 
 
+_DECISION_KO = {
+    "covered": "보도",
+    "not_covered": "미보도",
+    "uncertain": "판정 불가(매칭 애매)",
+    "no_data": "판정 불가(기사 없음)",
+}
+
+
+def _probe_line(verdict: BlindspotVerdict) -> str:
+    bits = []
+    for country, probe in sorted(verdict.probes.items()):
+        label = _DECISION_KO.get(probe.decision, probe.decision)
+        bits.append(f"{flag(country)} {label} ({probe.best_score:.3f})")
+    return " · ".join(bits)
+
+
 def render_blindspots(
     verdicts: Sequence[BlindspotVerdict],
     clusters: Mapping[str, Cluster],
     articles: Mapping[str, Article],
     sources: Mapping[str, SourceProfile],
 ) -> list[str]:
-    hits = [v for v in verdicts if v.is_blindspot]
-    uncertain = [
+    """두 단계로 보여준다 (ADR 0005).
+
+    1차는 한국·일본 모두 미보도 — 접할 기회가 아예 없었던 사건.
+    2차는 한쪽만 미보도 — 기회는 있었지만 놓쳤을 수 있는 약한 신호.
+    둘을 섞으면 1차의 의미가 묻히므로 분리한다.
+    """
+    primary = sorted(
+        (v for v in verdicts if v.is_blindspot), key=lambda x: -x.spread_score
+    )
+    secondary = sorted(
+        (v for v in verdicts if v.is_divergent), key=lambda x: -x.spread_score
+    )
+    undecided = [
         v for v in verdicts
-        if not v.is_blindspot and any(p.decision == "uncertain" for p in v.probes.values())
+        if v.undecided and not v.is_blindspot and not v.is_divergent
     ]
-    lines = ["## 보도 공백", ""]
-    if not hits:
-        lines += ["해당 없음.", ""]
-    for n, v in enumerate(sorted(hits, key=lambda x: -x.spread_score), 1):
+
+    def entry(n: int, v: BlindspotVerdict, *, with_coverage: bool) -> list[str]:
+        out = [f"{n}. **{v.event_label}**"]
         cluster = clusters.get(v.cluster_id)
-        lines.append(f"{n}. **{v.event_label}**")
-        if cluster is not None:
-            lines.append(f"   - 해외 보도: {_coverage_line(cluster, articles, sources)}"
-                         f" · 독립 보도 {cluster.wire_groups}건 · 블록 {len(cluster.blocs)}개")
-        for country, probe in sorted(v.probes.items()):
-            lines.append(
-                f"   - {flag(country)} 판정: {probe.decision} (최고점 {probe.best_score:.3f})"
+        if with_coverage and cluster is not None:
+            out.append(
+                f"   - 해외 보도: {_coverage_line(cluster, articles, sources)}"
+                f" · 독립 보도 {cluster.wire_groups}건 · 블록 {len(cluster.blocs)}개"
             )
-        lines.append("")
-    if uncertain:
+        out.append(f"   - {_probe_line(v)}")
+        return out
+
+    lines = ["## 보도 공백", ""]
+
+    lines += ["### 1차 — 한국·일본 모두 미보도", "",
+              "_접할 기회가 아예 없었던 사건._", ""]
+    if primary:
+        for n, v in enumerate(primary, 1):
+            lines += entry(n, v, with_coverage=True)
+            lines.append("")
+    else:
+        lines += ["해당 없음.", ""]
+
+    if secondary:
+        lines += ["### 2차 — 한쪽만 미보도 (약한 신호)", "",
+                  "_한쪽 언론이 다뤘으므로 접할 기회는 있었지만, 놓쳤을 수 있는 사건._", ""]
+        for n, v in enumerate(secondary, 1):
+            lines += entry(n, v, with_coverage=True)
+            lines.append("")
+
+    if undecided:
+        reasons = sorted({r for v in undecided for r in v.undecided.values()})
         lines += [
-            f"> 판정 불확실 {len(uncertain)}건은 위 목록에서 제외했습니다. "
-            "교차언어 매칭이 애매한 경우를 공백으로 세면 거짓 공백이 생깁니다 (ADR 0002).",
+            f"> 판정 불가 {len(undecided)}건은 두 목록에서 제외했습니다 — "
+            + "; ".join(reasons)
+            + ". 모르는 것을 공백으로 세면 거짓 공백이 됩니다 (ADR 0002·0005).",
             "",
         ]
     return lines

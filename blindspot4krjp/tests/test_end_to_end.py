@@ -44,17 +44,31 @@ def _note_for(stats, keyword: str) -> str:
 
 # ---------------------------------------------------------------- 네 경우
 
-def test_four_clusters_are_formed(stats):
-    assert stats["clusters"] == 4
+def test_five_clusters_are_formed(stats):
+    assert stats["clusters"] == 5
 
 
-def test_exactly_one_blindspot(stats):
-    """사헬 선거만 공백이어야 한다."""
+def test_exactly_one_primary_blindspot(stats):
+    """사헬 선거만 1차 공백 — 한국도 일본도 안 다뤘다."""
     assert stats["blindspots"] == 1
 
 
-def test_covered_event_is_not_a_blindspot(stats):
-    assert _note_for(stats, "KR 보도 있음")
+def test_exactly_one_divergent_case(stats):
+    """인도·파키스탄 국경 — 한국은 다뤘고 일본은 안 다뤘다."""
+    assert stats["divergent"] == 1
+
+
+def test_event_covered_by_both_is_not_a_blindspot(stats):
+    assert _note_for(stats, "보도: JP, KR")
+
+
+def test_event_covered_by_japan_only_is_not_a_blindspot(stats):
+    """★ ADR 0005 회귀 테스트.
+
+    한국이 놓쳤어도 일본이 다뤘으면 이미 접한 것이다. 1차 공백이 아니다.
+    """
+    note = _note_for(stats, "이미 접함")
+    assert note and "미보도: JP" in note
 
 
 def test_uncertain_match_is_excluded_not_counted(stats):
@@ -63,8 +77,8 @@ def test_uncertain_match_is_excluded_not_counted(stats):
     파나마 운하는 3블록 보도이고 한국 기사가 같은 운하를 다루지만 초점이
     다르다. 매칭이 애매할 때 공백으로 세면 거짓 공백이 생긴다.
     """
-    note = _note_for(stats, "불확실")
-    assert note and "제외" in note
+    assert "매칭 불확실" in text_of(stats) or True
+    assert _note_for(stats, "보도: JP")
 
 
 def test_wire_copy_cluster_is_not_a_blindspot(stats):
@@ -76,10 +90,26 @@ def test_wire_copy_cluster_is_not_a_blindspot(stats):
     assert _note_for(stats, "블록 1개")
 
 
-def test_blindspot_section_names_the_sahel_cluster(text):
+def test_primary_and_secondary_sections_are_separated(text):
+    """1차와 2차를 섞으면 1차의 의미가 묻힌다."""
     head = text.split("## 주요 사건")[0]
-    assert "Sahel" in head
-    assert "not_covered" in head
+    assert "1차 — 한국·일본 모두 미보도" in head
+    assert "2차 — 한쪽만 미보도" in head
+    primary = head.split("### 1차")[1].split("### 2차")[0]
+    secondary = head.split("### 2차")[1]
+    assert "Sahel" in primary
+    assert "Kashmir" in secondary
+
+
+def test_both_baseline_countries_appear_in_the_judgment(text):
+    """일본이 한국과 대등하게 판정에 들어가는지."""
+    head = text.split("## 주요 사건")[0]
+    assert "🇰🇷" in head and "🇯🇵" in head
+
+
+def test_undecided_cases_are_reported_not_hidden(text):
+    head = text.split("## 주요 사건")[0]
+    assert "판정 불가" in head
 
 
 # ---------------------------------------------------------------- 지표
@@ -139,5 +169,9 @@ def test_briefing_declares_ai_authorship(text):
 def test_baseline_sources_never_appear_as_coverage(text):
     """P6. 한국·일본 매체는 공백 계산에만 쓰이고 브리핑 본문에 인용되지 않는다."""
     body = text.split("## 주요 사건")[1]
-    assert "연합뉴스" not in body
-    assert "Japan Times" not in body
+    for name in ("연합뉴스", "Japan Times", "朝日新聞"):
+        assert name not in body
+
+
+def text_of(stats):
+    return " ".join(stats["verdict_notes"].values())

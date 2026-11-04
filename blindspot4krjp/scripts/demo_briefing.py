@@ -38,7 +38,7 @@ def run(cfg: dict) -> tuple[str, dict]:
     verdicts = []
     for cluster in clusters:
         probes = {}
-        for country in ("KR", "JP"):
+        for country in cfg["blindspot"]["home_media"]:
             pool = [
                 a for a in baseline
                 if sources[a.source_id].country == country
@@ -68,6 +68,7 @@ def run(cfg: dict) -> tuple[str, dict]:
     )
     stats["clusters"] = len(clusters)
     stats["blindspots"] = sum(1 for v in verdicts if v.is_blindspot)
+    stats["divergent"] = sum(1 for v in verdicts if v.is_divergent)
     stats["verdict_notes"] = {v.cluster_id: v.note for v in verdicts}
     return text, stats
 
@@ -86,7 +87,8 @@ def main() -> int:
 
     print(text)
     print("\n" + "=" * 60, file=sys.stderr)
-    print(f"클러스터 {stats['clusters']}개 · 공백 {stats['blindspots']}건", file=sys.stderr)
+    print(f"클러스터 {stats['clusters']}개 · 1차 공백 {stats['blindspots']}건 "
+          f"· 한·일 엇갈림 {stats['divergent']}건", file=sys.stderr)
     print(f"M1 환각률: {stats['m1_dropped']}/{stats['m1_total']}", file=sys.stderr)
     print(f"M2 앵글로권 과대인용: {stats['m2']}", file=sys.stderr)
     for cid, note in stats["verdict_notes"].items():

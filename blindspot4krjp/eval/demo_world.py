@@ -7,11 +7,12 @@
   2. ADR 0002(불확실 구간 제외)와 ADR 0004(전재 축약)가 산출물에서
      실제로 어떻게 보이는지 눈으로 확인한다.
 
-클러스터 4개를 의도적으로 서로 다른 경우로 구성했다.
-  A 프랑스 연금 시위    — 4블록 독립 보도 + 한국 보도 있음  → 공백 아님
-  B 사헬 선거 분쟁      — 3블록 독립 보도 + 한국 보도 없음  → ★ 공백
-  C 메콩강 댐 (전재)    — 3블록에 실렸지만 통신사 기사 1건  → 공백 아님 (ADR 0004)
-  D 파나마 운하 협상    — 3블록 독립 보도 + 한국 매칭 애매  → 제외 (ADR 0002)
+클러스터 5개를 의도적으로 서로 다른 경우로 구성했다.
+  A 프랑스 연금 시위    — 4블록 독립 · 한국 보도 · 일본 보도    → 공백 아님
+  B 사헬 선거 분쟁      — 3블록 독립 · 한국 미보도 · 일본 미보도 → ★ 1차 공백
+  C 메콩강 댐 (전재)    — 3블록에 실렸지만 통신사 1건           → 기준 미달 (ADR 0004)
+  D 파나마 운하 협상    — 3블록 독립 · 한국 애매 · 일본 보도     → 판정 불가 (ADR 0002)
+  E 인도-파키스탄 국경  — 3블록 독립 · 한국 보도 · 일본 미보도   → ★ 2차 (한·일 엇갈림)
 """
 
 from __future__ import annotations
@@ -51,7 +52,9 @@ def sources() -> dict[str, SourceProfile]:
              ownership="state_owned", editorial_independence="state_controlled",
              political_lean="state_line",
              lean_basis="RSF Press Freedom Index (합성 데이터용 예시)"),
+        # baseline = 내가 실제로 접하는 언론. 한국과 일본을 하나의 환경으로 본다.
         _src("yonhap", "연합뉴스", "KR", "other", "ko", role="baseline"),
+        _src("asahi", "朝日新聞", "JP", "other", "ja", role="baseline"),
         _src("japantimes", "The Japan Times", "JP", "other", "en", role="baseline"),
     ]
     return {p.id: p for p in profiles}
@@ -124,24 +127,63 @@ def overseas_articles() -> list[Article]:
            "Panama Canal fee negotiations proceed in orderly fashion",
            "Talks on an 18 percent Panama Canal fee adjustment are proceeding, with "
            "officials describing the process as orderly.", "en", 3),
+
+        # E — 인도·파키스탄 국경 교전. 3블록 독립 보도.
+        #     한국은 보도, 일본은 미보도 → 1차 공백은 아니지만 한·일 엇갈림.
+        _a("e1", "wapo",
+           "Border exchange of fire reported along Kashmir line",
+           "Both armies confirmed a border exchange of fire near the Kashmir line of "
+           "control, with 7 posts affected, officials said.", "en", 1),
+        _a("e2", "lemonde",
+           "Échanges de tirs signalés à la frontière au Cachemire",
+           "Les deux armées ont confirmé des échanges de tirs à la frontière du "
+           "Cachemire, 7 postes étant touchés.", "fr", 2),
+        _a("e3", "thehindu",
+           "Border firing along LoC leaves posts damaged",
+           "Seven posts were damaged in a border exchange of fire along the Line of "
+           "Control in Kashmir, army sources said.", "en", 3),
     ]
 
 
 def baseline_articles() -> list[Article]:
+    """한국·일본 기사. 공백 계산에만 쓰이고 브리핑 본문에 인용되지 않는다 (P6).
+
+    두 나라 모두 그날 기사를 냈다는 점이 중요하다 — 기사가 아예 없으면
+    "안 다뤘다"가 아니라 "모른다"(no_data)여야 하기 때문이다 (ADR 0005).
+    """
     return [
-        # A 에 대한 한국 보도 — 명확한 매칭.
+        # A — 한국·일본 모두 보도.
         _a("kr_a", "yonhap",
            "프랑스 연금개혁 반대 시위 격화…파리서 4500명 집결",
            "프랑스 파리에서 마크롱 대통령의 연금개혁에 반대하는 시위대 4500명이 "
            "모였고 경찰이 해산에 나섰다.", "ko", 5),
-        # D 에 대한 한국 보도 — 같은 운하를 다루지만 초점이 달라 애매하다.
+        _a("jp_a", "asahi",
+           "フランス年金改革に反対するデモ、パリで4500人",
+           "フランスのパリでマクロン大統領の年金改革に反対するデモに4500人が集まり、"
+           "警察が解散させた。", "ja", 5),
+
+        # D — 한국은 같은 운하를 다루지만 초점이 달라 애매, 일본은 명확히 보도.
         _a("kr_d", "yonhap",
            "파나마 운하 가뭄에 통항 제한 지속",
            "파나마 운하 당국이 가뭄으로 인한 일일 통항 선박 수 제한을 유지하기로 했다.", "ko", 6),
-        # 전혀 무관한 한국 기사 — 후보 풀에 잡음을 넣는다.
+        _a("jp_d", "japantimes",
+           "Panama Canal transit fee talks open",
+           "Negotiators began talks on a proposed increase in パナマ運河 transit fees, "
+           "with shipping groups watching closely.", "en", 6),
+
+        # E — 한국만 보도. 일본 미보도 → 한·일 엇갈림.
+        _a("kr_e", "yonhap",
+           "인도-파키스탄 국경서 교전…초소 7곳 피해",
+           "인도와 파키스탄 양군이 카슈미르 국경에서 교전을 확인했으며 초소 7곳이 "
+           "피해를 입었다고 밝혔다.", "ko", 6),
+
+        # 잡음 — 두 나라 모두 그날 다른 기사를 냈다는 사실을 만든다.
         _a("kr_x", "yonhap",
            "국내 반도체 수출 3개월 연속 증가",
            "반도체 수출이 3개월 연속 증가하며 회복세를 보였다.", "ko", 7),
+        _a("jp_x", "asahi",
+           "国内の半導体輸出が3カ月連続で増加",
+           "半導体の輸出が3カ月連続で増加し、回復の兆しを見せている。", "ja", 7),
     ]
 
 
@@ -156,16 +198,20 @@ _TOPICS = {
     "scrutin": [0.0, 1.0, 0.0, 0.0],
     "poll": [0.0, 1.0, 0.0, 0.0],
     "election": [0.0, 1.0, 0.0, 0.0],
+    "Border": [0.0, 0.0, 0.0, 0.0, 1.0],
+    "border": [0.0, 0.0, 0.0, 0.0, 1.0],
+    "Échanges": [0.0, 0.0, 0.0, 0.0, 1.0],
 }
+_DIM = 5
 
 
 def embedder(texts):
     out = []
     for text in texts:
-        vec = [0.0, 0.0, 0.0, 0.0]
+        vec = [0.0] * _DIM
         for marker, v in _TOPICS.items():
             if marker.lower() in text.lower():
-                vec = v
+                vec = list(v) + [0.0] * (_DIM - len(v))
                 break
         out.append(vec)
     return out
@@ -180,10 +226,14 @@ def baseline_sim(query: str, candidates):
     sims = []
     q = query.lower()
     for cand in candidates:
-        if "연금개혁" in cand and "pension" in q:
-            sims.append(0.90)
-        elif "파나마" in cand and "panama" in q:
-            sims.append(0.44)          # 애매 구간으로 떨어지게 한 값
+        if "pension" in q and ("연금개혁" in cand or "年金改革" in cand):
+            sims.append(0.90)                      # A: 한·일 모두 보도
+        elif "panama" in q and "パナマ運河" in cand:
+            sims.append(0.88)                      # D: 일본은 명확히 보도
+        elif "panama" in q and "파나마" in cand:
+            sims.append(0.44)                      # D: 한국은 애매 구간
+        elif "border" in q and "국경" in cand:
+            sims.append(0.90)                      # E: 한국만 보도
         else:
             sims.append(0.05)
     return sims

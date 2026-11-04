@@ -95,10 +95,22 @@ def test_hybrid_signals_rescue_a_weak_embedding(cluster, articles, cfg, kr_artic
     assert strong.signals.entity_overlap > 0
 
 
-def test_empty_baseline_pool_is_not_covered(cluster, articles, cfg):
+def test_no_articles_at_all_is_no_data_not_not_covered(cluster, articles, cfg):
+    """★ ADR 0005.
+
+    그 나라 기사를 하나도 못 받은 것은 "안 다뤘다"가 아니라 "모른다"다.
+    이걸 구분하지 않으면 피드가 고장난 날 모든 사건이 공백으로 집계된다.
+    """
     probe = gap.probe_baseline(cluster, articles, [], "KR", fake_embed({}), cfg)
-    assert probe.decision == "not_covered"
+    assert probe.decision == "no_data"
     assert probe.matched_article_ids == []
+
+
+def test_articles_exist_but_none_in_window_is_not_covered(cluster, articles, cfg, kr_article_factory):
+    """그 나라는 그날 기사를 냈지만 이 사건 시간대에는 없었다 — 진짜 미보도에 가깝다."""
+    far = kr_article_factory("무관한 기사", "전혀 다른 내용이다.", 500.0)
+    probe = gap.probe_baseline(cluster, articles, [far], "KR", fake_embed({}), cfg)
+    assert probe.decision == "not_covered"
 
 
 # ---------------------------------------------------------------- 판정
@@ -111,39 +123,66 @@ def _probe(decision: str, score: float = 0.5):
 
 def test_blindspot_requires_enough_bloc_spread(cluster, cfg):
     narrow = cluster.model_copy(update={"blocs": {"anglo"}})
-    v = gap.verdict(narrow, {"KR": _probe("not_covered")}, cfg)
+    v = gap.verdict(narrow, {"KR": _probe("not_covered"), "JP": _probe("not_covered")}, cfg)
     assert not v.is_blindspot
     assert "블록" in v.note
 
 
-def test_blindspot_when_spread_and_no_kr_coverage(cluster, cfg):
-    v = gap.verdict(cluster, {"KR": _probe("not_covered")}, cfg)
-    assert v.is_blindspot
+def test_blindspot_requires_both_countries_to_have_missed_it(cluster, cfg):
+    """★ ADR 0005 의 핵심.
 
-
-def test_covered_is_not_a_blindspot(cluster, cfg):
-    v = gap.verdict(cluster, {"KR": _probe("covered", 0.8)}, cfg)
-    assert not v.is_blindspot
-
-
-def test_uncertain_is_never_counted_as_blindspot(cluster, cfg):
-    """★ 이 테스트가 설계의 핵심이다.
-
-    애매한 매칭을 공백으로 세면, 교차언어 매칭 실패가 그대로 거짓 공백이
-    되어 지표가 한 방향으로 부풀려진다. 그래서 uncertain 은 제외하고 센다.
+    한국과 일본을 하나의 언론 환경으로 본다. 둘 다 안 다뤘을 때만 공백이다.
     """
-    v = gap.verdict(cluster, {"KR": _probe("uncertain", 0.45)}, cfg)
+    v = gap.verdict(cluster, {"KR": _probe("not_covered"), "JP": _probe("not_covered")}, cfg)
+    assert v.is_blindspot
+    assert v.missed_by == {"KR", "JP"}
+    assert not v.is_divergent
+
+
+def test_one_country_covering_it_removes_it_from_the_blindspot_list(cluster, cfg):
+    """일본이 다뤘으면 이미 접한 것이다. OR 로 두면 일본어로 읽은 기사가
+    목록을 채워서 쓸모가 없어진다."""
+    v = gap.verdict(
+        cluster, {"KR": _probe("not_covered"), "JP": _probe("covered", 0.8)}, cfg
+    )
     assert not v.is_blindspot
-    assert "불확실" in v.note
+    assert v.is_divergent, "공백은 아니지만 한·일 엇갈림으로는 남는다"
+    assert v.covered_by == {"JP"} and v.missed_by == {"KR"}
 
 
-def test_missing_kr_probe_is_not_a_blindspot(cluster, cfg):
+def test_both_covering_it_is_neither(cluster, cfg):
+    v = gap.verdict(
+        cluster, {"KR": _probe("covered", 0.8), "JP": _probe("covered", 0.9)}, cfg
+    )
+    assert not v.is_blindspot and not v.is_divergent
+
+
+def test_uncertain_blocks_the_blindspot_call(cluster, cfg):
+    """★ ADR 0002. 한쪽이 애매하면 내가 이미 봤는지 알 수 없다."""
+    v = gap.verdict(
+        cluster, {"KR": _probe("not_covered"), "JP": _probe("uncertain", 0.45)}, cfg
+    )
+    assert not v.is_blindspot
+    assert "JP" in v.undecided
+    assert "불확실" in v.undecided["JP"]
+
+
+def test_no_data_blocks_the_blindspot_call(cluster, cfg):
+    """★ ADR 0005. 피드가 고장난 나라를 미보도로 세면 공백이 폭증한다."""
+    v = gap.verdict(
+        cluster, {"KR": _probe("not_covered"), "JP": _probe("no_data", 0.0)}, cfg
+    )
+    assert not v.is_blindspot
+    assert "기사 없음" in v.undecided["JP"]
+
+
+def test_no_probes_is_not_a_blindspot(cluster, cfg):
     v = gap.verdict(cluster, {}, cfg)
     assert not v.is_blindspot
 
 
 def test_spread_score_prefers_blocs_over_article_count():
-    """P7: 앵글로권 기사 수가 많아도 블록이 적으면 점수가 낮아야 한다."""
+    """P8: 앵글로권 기사 수가 많아도 블록이 적으면 점수가 낮아야 한다."""
     many_anglo = gap.spread_score(["anglo"], ["US", "GB", "CA", "AU"])
     few_diverse = gap.spread_score(["anglo", "eu", "sinosphere"], ["US", "FR", "CN"])
     assert few_diverse > many_anglo

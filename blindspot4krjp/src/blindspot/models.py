@@ -138,29 +138,58 @@ class MatchSignals(BaseModel):
 
 
 class BaselineProbe(BaseModel):
-    """한 클러스터에 대한 baseline(KR 또는 JP) 보도 여부 판정.
+    """한 클러스터에 대한 특정 baseline 국가의 보도 여부 판정.
 
-    ★ 3분기 판정이다. 'uncertain' 이 존재하는 것이 핵심이다.
-    교차언어 매칭이 실패하면 거짓 공백이 계통적으로 과다 생성되므로,
-    애매한 구간은 공백으로 집계하지 않고 따로 센다.
+    ★ 4분기 판정이다. 'uncertain' 과 'no_data' 가 존재하는 것이 핵심이다.
+
+    uncertain  교차언어 매칭이 애매하다. 공백으로 세면 매칭 실패가 그대로
+               거짓 공백이 된다 (ADR 0002).
+    no_data    그 나라의 기사를 그날 하나도 받지 못했다. "그 나라가 안 다뤘다"
+               가 아니라 "우리가 모른다" 다. 피드가 고장난 날 모든 사건이
+               공백으로 집계되는 것을 막는다 (ADR 0005).
     """
 
     cluster_id: str
     baseline_country: str
-    decision: Literal["covered", "not_covered", "uncertain"]
+    decision: Literal["covered", "not_covered", "uncertain", "no_data"]
     best_score: float
     matched_article_ids: list[str] = Field(default_factory=list)
     signals: MatchSignals | None = None
 
 
 class BlindspotVerdict(BaseModel):
+    """공백 판정 (ADR 0005).
+
+    ★ 한국과 일본은 **하나의 언론 환경**이다. 두 독자가 아니라, 두 언론을
+    모두 소비하는 한 독자를 가정한다. 그러면 한국이 놓쳤어도 일본이 다룬
+    사건은 그 독자가 이미 본 것이므로 공백이 아니다.
+
+    따라서 공백 조건은 AND 다 — baseline 전체가 미보도일 때만 공백이다.
+    OR 로 두면 일본어로 이미 읽은 기사가 목록을 채워서 쓸모가 없어진다.
+
+    한쪽만 보도한 사건(`is_divergent`)은 공백이 아니지만 한·일 언론 간
+    보도 차이로서 따로 보여줄 가치가 있다.
+    """
+
     cluster_id: str
     event_label: str
     blocs: set[Bloc]
     spread_score: float
     probes: dict[str, BaselineProbe] = Field(default_factory=dict)
-    is_blindspot: bool
+    is_blindspot: bool = Field(
+        default=False, description="baseline 전체가 미보도 (AND)"
+    )
+    missed_by: set[str] = Field(default_factory=set, description="미보도로 판정된 국가")
+    covered_by: set[str] = Field(default_factory=set, description="보도한 국가")
+    undecided: dict[str, str] = Field(
+        default_factory=dict, description="판정하지 못한 국가와 그 이유"
+    )
     note: str = ""
+
+    @property
+    def is_divergent(self) -> bool:
+        """한쪽은 다루고 한쪽은 안 다룬 사건. 공백은 아니지만 비교 가치가 있다."""
+        return bool(self.covered_by) and bool(self.missed_by)
 
 
 # ---------------------------------------------------------------- 주장

@@ -169,6 +169,16 @@ def probe_baseline(
         for aid in cluster.article_ids
         if aid in cluster_articles
     )
+    if not baseline_articles:
+        # ★ ADR 0005: 그 나라 기사를 그날 하나도 못 받았다.
+        # "안 다뤘다"가 아니라 "모른다" 다. 피드가 고장난 날 모든 사건이
+        # 공백으로 집계되는 것을 막는 구분이다.
+        return BaselineProbe(
+            cluster_id=cluster.id,
+            baseline_country=baseline_country,
+            decision="no_data",
+            best_score=0.0,
+        )
     if not times or not query.strip():
         return BaselineProbe(
             cluster_id=cluster.id,
@@ -187,6 +197,8 @@ def probe_baseline(
         if a.source_id and abs(a.published_at - cluster_time) <= window
     ]
     if not pool:
+        # 그 나라는 그날 기사를 냈지만 이 사건의 시간대에는 없었다.
+        # 위의 no_data 와 다르다 — 이쪽은 진짜 미보도에 가깝다.
         return BaselineProbe(
             cluster_id=cluster.id,
             baseline_country=baseline_country,
@@ -222,31 +234,59 @@ def verdict(
     probes: Mapping[str, BaselineProbe],
     cfg: Mapping,
 ) -> BlindspotVerdict:
-    """공백 판정.
+    """공백 판정 (ADR 0005).
 
-    규칙: 서로 다른 블록 N개 이상이 보도했고(P7), KR 이 not_covered 일 때만 공백.
-    KR 이 uncertain 이면 공백으로 세지 않는다 — 과다 보고를 막기 위한 보수적 선택이며,
-    그 대신 note 에 이유를 남겨 집계할 수 있게 한다.
+    ★ 한국과 일본을 **하나의 언론 환경**으로 본다. 두 독자가 아니라, 두
+    언론을 모두 소비하는 한 독자를 가정한다. 목적은 "내가 접하는 언론의
+    바깥"을 찾는 것이므로, 한국이 놓쳤어도 일본이 다룬 사건은 그 독자가
+    이미 본 것이고 공백이 아니다.
+
+    조건 (전부 충족해야 공백):
+      1. 서로 다른 블록 N개 이상이 **독립적으로** 보도했다 (P8, ADR 0004)
+      2. baseline 국가가 하나 이상 판정되었다
+      3. 판정된 모든 국가가 not_covered 다 (AND)
+      4. 판정하지 못한 국가가 없다
+
+    4번이 필요한 이유: 한쪽이 uncertain 이거나 no_data 면 "내가 이미 봤는지"
+    를 알 수 없다. 모르는 것을 공백으로 세면 거짓 공백이 된다. 이 설계가
+    일관되게 택하는 방향 — 과다 보고보다 과소 보고 — 과 같다.
     """
     min_blocs = cfg["blindspot"]["min_blocs"]
-    kr = probes.get("KR")
     enough_spread = len(cluster.blocs) >= min_blocs
 
+    missed: set[str] = set()
+    covered: set[str] = set()
+    undecided: dict[str, str] = {}
+
+    for country, probe in sorted(probes.items()):
+        if probe.decision == "not_covered":
+            missed.add(country)
+        elif probe.decision == "covered":
+            covered.add(country)
+        elif probe.decision == "uncertain":
+            undecided[country] = f"매칭 불확실 (score={probe.best_score:.3f})"
+        else:  # no_data
+            undecided[country] = "해당 국가 기사 없음 — 판정 불가"
+
+    is_bs = bool(
+        enough_spread and missed and not covered and not undecided
+    )
+
     if not enough_spread:
-        note = f"블록 {len(cluster.blocs)}개 < 기준 {min_blocs}개"
-        is_bs = False
-    elif kr is None:
-        note = "KR baseline probe 없음"
-        is_bs = False
-    elif kr.decision == "uncertain":
-        note = f"KR 매칭 불확실 (score={kr.best_score:.3f}) — 공백 집계에서 제외"
-        is_bs = False
-    elif kr.decision == "covered":
-        note = "KR 보도 있음"
-        is_bs = False
+        note = f"독립 보도 블록 {len(cluster.blocs)}개 < 기준 {min_blocs}개"
+    elif not probes:
+        note = "baseline 판정 없음"
+    elif is_bs:
+        note = "공백 — " + ", ".join(sorted(missed)) + " 모두 미보도"
+    elif covered and missed:
+        note = (
+            "공백 아님 (이미 접함) — 보도: " + ", ".join(sorted(covered))
+            + " / 미보도: " + ", ".join(sorted(missed))
+        )
+    elif covered:
+        note = "공백 아님 — 보도: " + ", ".join(sorted(covered))
     else:
-        note = "블록 기준 충족 + KR 보도 없음"
-        is_bs = True
+        note = "판정 불가 — " + ", ".join(f"{c}: {r}" for c, r in sorted(undecided.items()))
 
     return BlindspotVerdict(
         cluster_id=cluster.id,
@@ -255,6 +295,9 @@ def verdict(
         spread_score=cluster.spread_score,
         probes=dict(probes),
         is_blindspot=is_bs,
+        missed_by=missed,
+        covered_by=covered,
+        undecided=undecided,
         note=note,
     )
 
