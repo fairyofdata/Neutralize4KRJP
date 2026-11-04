@@ -19,6 +19,7 @@ import math
 from collections.abc import Callable, Mapping, Sequence
 from datetime import date, timedelta
 
+from .aliases import AliasIndex
 from .dedupe import blocs_with_pickups, group_wire_duplicates, origin_blocs
 from .models import Article, Cluster, SourceProfile
 
@@ -76,6 +77,7 @@ def build_clusters(
     cfg: Mapping,
     *,
     day: date | None = None,
+    aliases: AliasIndex | None = None,
 ) -> list[Cluster]:
     """해외 소스 기사 → 클러스터 목록.
 
@@ -127,6 +129,11 @@ def build_clusters(
         countries = {
             sources[a.source_id].country for a in members if a.source_id in sources
         }
+        # 개체 추출 — '외부에서 본 안쪽 이슈' 선별에 쓴다 (ADR 0006).
+        entities: set[str] = set()
+        if aliases is not None:
+            for art in members:
+                entities |= aliases.extract(art.match_text())
 
         out.append(
             Cluster(
@@ -141,6 +148,7 @@ def build_clusters(
                 blocs_with_pickups=display_blocs,
                 wire_groups=len(groups),
                 spread_score=spread_from(blocs, countries),
+                entities=entities,
             )
         )
 

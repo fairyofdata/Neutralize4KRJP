@@ -191,13 +191,16 @@ def read_candidates(path: Path) -> list[dict]:
             continue
         out.append({
             "bloc": cols[0], "country": cols[1], "source_id": cols[2],
-            "url": cols[3], "note": cols[4] if len(cols) > 4 else "",
+            "url": cols[3],
+            "priority": cols[4] if len(cols) > 4 else "",
+            "note": cols[5] if len(cols) > 5 else "",
         })
     return out
 
 
 def print_table(rows: list[dict]) -> None:
-    hdr = f"{'source_id':<22}{'res':<10}{'items':>6}{'lead%':>7}{'leadMed':>8}{'echo%':>7}{'robots':>8}  feed"
+    hdr = (f"{'source_id':<22}{'prio':<9}{'res':<10}{'items':>6}{'lead%':>7}"
+           f"{'leadMed':>8}{'echo%':>7}{'robots':>8}  feed")
     print(hdr)
     print("-" * len(hdr))
     for r in sorted(rows, key=lambda x: (x.get("bloc", ""), x.get("source_id", ""))):
@@ -208,7 +211,7 @@ def print_table(rows: list[dict]) -> None:
         robots = r.get("robots_allowed")
         robots_s = "-" if robots is None else ("allow" if robots else "DENY")
         print(
-            f"{r.get('source_id',''):<22}{res:<10}{r.get('items',0):>6}"
+            f"{r.get('source_id',''):<22}{r.get('priority','')[:8]:<9}{res:<10}{r.get('items',0):>6}"
             f"{r.get('pct_lead',0):>7.2f}{r.get('lead_median_chars',0):>8}"
             f"{r.get('lead_echoes_title_pct',0):>7.2f}{robots_s:>8}  "
             f"{(r.get('feed_title') or r.get('detail',''))[:44]}"
@@ -250,6 +253,20 @@ async def main_async(args) -> int:
     ]
     print(f"\n리드를 쓸만하게 제공하는 소스: {len(usable)}/{len(rows)}")
     print("  " + ", ".join(sorted(r["source_id"] for r in usable)) if usable else "  (없음)")
+
+    # ★ ADR 0006: 자국어판이 전제를 지킨다. 영문판 비중을 드러낸다.
+    by_prio: dict[str, int] = {}
+    for r in usable:
+        by_prio[r.get("priority", "")] = by_prio.get(r.get("priority", ""), 0) + 1
+    if by_prio:
+        print(f"\n우선순위별 사용 가능: {by_prio}")
+        native, export = by_prio.get("native", 0), by_prio.get("export", 0)
+        if export > native:
+            print(
+                "  ⚠ 영문판(export)이 자국어판(native)보다 많습니다. 그대로 채택하면 "
+                "국내 필터를 수출용 필터로 바꾸는 것일 뿐입니다 (ADR 0006).\n"
+                "    자국어판 URL 을 더 찾아보고, 그래도 안 되면 audit 에 그 사실을 적으십시오."
+            )
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")

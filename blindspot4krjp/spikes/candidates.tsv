@@ -1,32 +1,91 @@
-# bloc	country	source_id	candidate_url	note
-anglo	US	ap	https://apnews.com/index.rss	AP 공개 RSS 현행 확인 필요
-anglo	US	npr_world	https://feeds.npr.org/1004/rss.xml	
-anglo	US	nyt_world	https://rss.nytimes.com/services/xml/rss/nyt/World.xml	초록까지만. 본문 금지
-anglo	US	wapo_world	https://feeds.washingtonpost.com/rss/world	
-anglo	US	foxnews_world	https://moxie.foxnews.com/google-publisher/world.xml	우파 축
-anglo	US	wsj_world	https://feeds.a.dj.com/rss/RSSWorldNews.xml	유료장벽
-anglo	US	reuters_world	https://www.reuters.com/arc/outboundfeeds/rss/?outputType=xml	공개 RSS 폐지 가능성 높음
-anglo	UK	bbc_world	https://feeds.bbci.co.uk/news/world/rss.xml	
-anglo	UK	guardian_world	https://www.theguardian.com/world/rss	Open Platform API 도 별도 확인
-anglo	UK	telegraph_world	https://www.telegraph.co.uk/world-news/rss.xml	우파 축
-eu	FR	france24_en	https://www.france24.com/en/rss	공영 영문판
-eu	FR	lemonde_intl	https://www.lemonde.fr/international/rss_full.xml	불어 원문
-eu	FR	rfi_en	https://www.rfi.fr/en/rss	
-eu	DE	dw_en	https://rss.dw.com/rdf/rss-en-all	공영
-eu	DE	spiegel_intl	https://www.spiegel.de/international/index.rss	
-eu	DE	faz_politik	https://www.faz.net/rss/aktuell/politik/	독어 원문
-mena	QA	aljazeera_en	https://www.aljazeera.com/xml/rss/all.xml	
-sea	SG	cna	https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml	
-sea	SG	straitstimes_world	https://www.straitstimes.com/news/world/rss.xml	
-sinosphere	TW	focustaiwan	https://focustaiwan.tw/rss/politics	대만 중앙통신 영문
-sinosphere	TW	taipeitimes	https://www.taipeitimes.com/xml/index.rss	
-sinosphere	CN	globaltimes	https://www.globaltimes.cn/rss/outbrain.xml	party_organ 계열. 라벨 필수
-sinosphere	CN	chinadaily_world	https://www.chinadaily.com.cn/rss/world_rss.xml	state_owned
-sinosphere	CN	xinhua_en	https://english.news.cn/rss/world.xml	국가통신사
-russia	RU	tass_en	https://tass.com/rss/v2.xml	state_owned. 라벨 필수
-russia	RU	moscowtimes	https://www.themoscowtimes.com/rss/news	망명 독립매체. 대조군
-southasia	IN	thehindu_intl	https://www.thehindu.com/news/international/feeder/default.rss	
-# --- role=baseline : 보도 공백 계산 전용. 브리핑 본문 투입 금지 (P6) ---
-baseline	KR	yonhap	https://www.yna.co.kr/rss/news.xml	
-baseline	KR	koreaherald	https://www.koreaherald.com/rss/020000000000.xml	
-baseline	JP	japantimes	https://www.japantimes.co.jp/feed/	
+# 조사 후보. 전부 **미검증** 이며 URL 이 맞는지가 바로 조사 대상이다.
+#
+# ★ priority 열의 의미 (ADR 0006)
+#   native   자국어판. 그 사회의 국내 담론에 가깝다. **1순위로 채택한다.**
+#   export   영문판/대외판. 외국인 독자를 위해 이미 정제된 것이다. 자국어판을
+#            구할 수 없을 때의 대체재이며, 채택하면 그 사실을 audit 에 적는다.
+#   baseline 안쪽 언론. 노출 격차 계산 전용이며 바깥 보도 집계에 들어가지 않는다.
+#
+# 왜 이 구분이 중요한가: Global Times 영문판·TASS 영문판·France24 영문판은
+# 대외 발신용으로 쓰인 것이다. 그것만 읽으면 국내 필터를 수출용 필터로
+# 바꾸는 것일 뿐, 바깥 담론에 닿지 못한다. 영문판으로 목록을 채우면 이
+# 프로젝트의 전제가 무너진다.
+#
+# bloc	country	source_id	candidate_url	priority	note
+
+# ─────────────────────────────── 유럽 (자국어 우선)
+eu	FR	lemonde_intl	https://www.lemonde.fr/international/rss_full.xml	native	불어
+eu	FR	liberation	https://www.liberation.fr/arc/outboundfeeds/rss/	native	불어 · URL 확인 필요
+eu	FR	lefigaro_intl	https://www.lefigaro.fr/rss/figaro_international.xml	native	불어 · 우중도
+eu	DE	faz_politik	https://www.faz.net/rss/aktuell/politik/	native	독어 · 우중도
+eu	DE	sz_politik	https://rss.sueddeutsche.de/rss/Politik	native	독어 · 중도좌
+eu	DE	spiegel_de	https://www.spiegel.de/schlagzeilen/index.rss	native	독어 (영문 international 판과 구별)
+eu	ES	elpais	https://feeds.elpais.com/mrss-s/pages/ep/site/elpais.com/portada	native	스페인어 · URL 확인 필요
+eu	IT	repubblica	https://www.repubblica.it/rss/esteri/rss2.0.xml	native	이탈리아어 · URL 확인 필요
+eu	PL	gazeta_swiat	https://wiadomosci.gazeta.pl/pub/rss/wiadomosci_swiat.htm	native	폴란드어 · URL 확인 필요
+
+# ─────────────────────────────── 중국어권 (자국어 우선)
+sinosphere	CN	renminribao	http://www.people.com.cn/rss/politics.xml	native	중문 당 기관지 · URL 확인 필요
+sinosphere	CN	xinhua_zh	http://www.xinhuanet.com/politics/news_politics.xml	native	중문 국가통신사 · URL 확인 필요
+sinosphere	CN	huanqiu	https://www.huanqiu.com/rss	native	환구시보 중문 · URL 확인 필요
+sinosphere	SG	zaobao	https://www.zaobao.com.sg/rss	native	연합조보 · 중문 · 중국 보도에 독립적 시각
+sinosphere	TW	cna_zh	https://feeds.feedburner.com/cnaFirstNews	native	대만 중앙통신 중문 · URL 확인 필요
+sinosphere	TW	ltn	https://news.ltn.com.tw/rss/world.xml	native	자유시보 중문 · URL 확인 필요
+sinosphere	HK	hk01	https://www.hk01.com/rss	native	홍콩 중문 · 매체 환경 변화 확인 필요
+
+# ─────────────────────────────── 러시아어권 (자국어 우선)
+russia	RU	kommersant	https://www.kommersant.ru/RSS/news.xml	native	러시아어 · URL 확인 필요
+russia	RU	rbc	https://rssexport.rbc.ru/rbcnews/news/30/full.rss	native	러시아어 경제지 · URL 확인 필요
+russia	RU	meduza_ru	https://meduza.io/rss/all	native	러시아어 망명 독립매체 · 대조군
+russia	RU	tass_ru	https://tass.ru/rss/v2.xml	native	러시아어 국영통신 · 라벨 필수
+
+# ─────────────────────────────── 중남미 (자국어 우선 · 기존 목록에 없던 블록)
+latam	BR	folha	https://feeds.folha.uol.com.br/mundo/rss091.xml	native	포르투갈어 · URL 확인 필요
+latam	AR	clarin_mundo	https://www.clarin.com/rss/mundo/	native	스페인어 · URL 확인 필요
+latam	MX	eluniversal	https://www.eluniversal.com.mx/rss.xml	native	스페인어 · URL 확인 필요
+latam	CL	latercera	https://www.latercera.com/feed/	native	스페인어 · URL 확인 필요
+
+# ─────────────────────────────── 아프리카 (기존 목록에 없던 블록)
+africa	NG	premiumtimes	https://www.premiumtimesng.com/feed	export	영어가 현지 보도 언어
+africa	KE	nation	https://nation.africa/kenya/rss	export	영어가 현지 보도 언어 · URL 확인 필요
+africa	ZA	mg	https://mg.co.za/feed/	export	영어가 현지 보도 언어
+africa	FR	jeuneafrique	https://www.jeuneafrique.com/feed/	native	불어 · 아프리카 전역 보도
+
+# ─────────────────────────────── 중동 · 남아시아 · 동남아
+mena	QA	aljazeera_ar	https://www.aljazeera.net/aljazeerarss/a7c186be-1baa-4bd4-9d80-a84db769f779/73d0e1b4-532f-45ef-b135-bfdff8b8cab9	native	아랍어 · URL 확인 필요
+mena	SA	asharq	https://aawsat.com/feed	native	아랍어 · URL 확인 필요
+southasia	IN	thehindu_intl	https://www.thehindu.com/news/international/feeder/default.rss	native	영어가 보도 언어
+southasia	IN	hindustantimes	https://www.hindustantimes.com/feeds/rss/world-news/rssfeed.xml	native	영어가 보도 언어
+southasia	PK	dawn	https://www.dawn.com/feeds/world	native	영어가 보도 언어
+sea	ID	tempo	https://rss.tempo.co/dunia	native	인도네시아어 · URL 확인 필요
+sea	SG	cna	https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml	export	영어
+sea	TH	bangkokpost	https://www.bangkokpost.com/rss/data/world.xml	export	영어
+
+# ─────────────────────────────── 앵글로권
+# ★ 비중 주의. 영문 매체가 압도적으로 많아서 블록 균형이 쉽게 무너진다.
+# 소수만 채택하고, audit 에 앵글로권 비중을 기록한다 (P8).
+anglo	US	npr_world	https://feeds.npr.org/1004/rss.xml	native	
+anglo	US	nyt_world	https://rss.nytimes.com/services/xml/rss/nyt/World.xml	native	초록까지만. 본문 금지
+anglo	US	wapo_world	https://feeds.washingtonpost.com/rss/world	native	
+anglo	US	foxnews_world	https://moxie.foxnews.com/google-publisher/world.xml	native	우파 축
+anglo	UK	bbc_world	https://feeds.bbci.co.uk/news/world/rss.xml	native	
+anglo	UK	guardian_world	https://www.theguardian.com/world/rss	native	Open Platform API 도 별도 확인
+anglo	UK	telegraph_world	https://www.telegraph.co.uk/world-news/rss.xml	native	우파 축
+
+# ─────────────────────────────── 영문판 (자국어판을 못 구할 때의 대체재)
+eu	FR	france24_en	https://www.france24.com/en/rss	export	대외 발신용 · 자국어판 우선
+eu	DE	dw_en	https://rss.dw.com/rdf/rss-en-all	export	대외 발신용 · 자국어판 우선
+sinosphere	CN	globaltimes_en	https://www.globaltimes.cn/rss/outbrain.xml	export	대외 발신용 · 라벨 필수
+sinosphere	CN	chinadaily_en	https://www.chinadaily.com.cn/rss/world_rss.xml	export	대외 발신용
+russia	RU	tass_en	https://tass.com/rss/v2.xml	export	대외 발신용
+mena	QA	aljazeera_en	https://www.aljazeera.com/xml/rss/all.xml	export	아랍어판 우선
+
+# ─────────────────────────────── 안쪽 언론 (노출 격차 계산 전용)
+# 바깥 보도 집계에 들어가지 않는다. 다만 프레이밍 비교표에는 한 행으로 등장한다.
+# ★ 커버리지 긴장: 너무 적게 담으면 격차를 과대 보고하고, 많이 담으면 과소 보고한다.
+baseline	KR	yonhap	https://www.yna.co.kr/rss/news.xml	baseline	
+baseline	KR	hani	https://www.hani.co.kr/rss/	baseline	좌 · URL 확인 필요
+baseline	KR	chosun	https://www.chosun.com/arc/outboundfeeds/rss/	baseline	우 · URL 확인 필요
+baseline	JP	asahi	https://www.asahi.com/rss/asahi/newsheadlines.rdf	baseline	좌중도 · URL 확인 필요
+baseline	JP	yomiuri	https://www.yomiuri.co.jp/rss/yol/latestnews	baseline	우중도 · URL 확인 필요
+baseline	JP	nhk	https://www.nhk.or.jp/rss/news/cat0.xml	baseline	공영 · URL 확인 필요

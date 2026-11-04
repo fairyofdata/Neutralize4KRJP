@@ -33,7 +33,9 @@ def run(cfg: dict) -> tuple[str, dict]:
     articles = {a.id: a for a in overseas + baseline}
     aliases = load_aliases(ROOT / "aliases.yaml")
 
-    clusters = build_clusters(overseas, sources, world.embedder, cfg, day=world.DAY)
+    clusters = build_clusters(
+        overseas, sources, world.embedder, cfg, day=world.DAY, aliases=aliases
+    )
 
     verdicts = []
     for cluster in clusters:
@@ -46,7 +48,7 @@ def run(cfg: dict) -> tuple[str, dict]:
             probes[country] = gap.probe_baseline(
                 cluster, articles, pool, country, world.baseline_sim, cfg, aliases
             )
-        verdicts.append(gap.verdict(cluster, probes, cfg))
+        verdicts.append(gap.exposure(cluster, gap.home_coverage(probes), cfg))
 
     analyses: dict[str, object] = {}
     stats = {"m1_dropped": 0, "m1_total": 0, "m2": {}}
@@ -63,12 +65,17 @@ def run(cfg: dict) -> tuple[str, dict]:
             anglo_amplification(clean.claims, cluster.article_ids, articles, sources), 3
         )
 
+    home_entities = cfg["blindspot"].get("home_entities", [])
     text = render.render_briefing(
-        world.DAY, clusters, verdicts, articles, sources, analyses, calibrated=False
+        world.DAY, clusters, verdicts, articles, sources, analyses,
+        home_entities=home_entities, calibrated=False,
     )
     stats["clusters"] = len(clusters)
-    stats["blindspots"] = sum(1 for v in verdicts if v.is_blindspot)
-    stats["divergent"] = sum(1 for v in verdicts if v.is_divergent)
+    stats["tiers"] = {v.cluster_id: v.tier for v in verdicts}
+    stats["gaps"] = {v.cluster_id: v.exposure_gap for v in verdicts}
+    stats["outside_view"] = sorted(
+        c.id for c in clusters if c.entities & set(home_entities)
+    )
     stats["verdict_notes"] = {v.cluster_id: v.note for v in verdicts}
     return text, stats
 
@@ -87,8 +94,10 @@ def main() -> int:
 
     print(text)
     print("\n" + "=" * 60, file=sys.stderr)
-    print(f"클러스터 {stats['clusters']}개 · 1차 공백 {stats['blindspots']}건 "
-          f"· 한·일 엇갈림 {stats['divergent']}건", file=sys.stderr)
+    print(f"클러스터 {stats['clusters']}개", file=sys.stderr)
+    print(f"분류: {stats['tiers']}", file=sys.stderr)
+    print(f"노출 격차: {stats['gaps']}", file=sys.stderr)
+    print(f"외부에서 본 안쪽 이슈: {stats['outside_view']}", file=sys.stderr)
     print(f"M1 환각률: {stats['m1_dropped']}/{stats['m1_total']}", file=sys.stderr)
     print(f"M2 앵글로권 과대인용: {stats['m2']}", file=sys.stderr)
     for cid, note in stats["verdict_notes"].items():

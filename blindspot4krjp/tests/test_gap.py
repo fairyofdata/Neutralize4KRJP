@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from blindspot import gap
 from blindspot.models import Cluster
 
@@ -115,70 +117,115 @@ def test_articles_exist_but_none_in_window_is_not_covered(cluster, articles, cfg
 
 # ---------------------------------------------------------------- 판정
 
-def _probe(decision: str, score: float = 0.5):
+def _probe(country: str, decision: str, matched: int = 0, score: float = 0.5):
     return gap.BaselineProbe(
-        cluster_id="c1", baseline_country="KR", decision=decision, best_score=score
+        cluster_id="c1", baseline_country=country, decision=decision, best_score=score,
+        matched_article_ids=[f"{country}{i}" for i in range(matched)],
     )
 
 
-def test_blindspot_requires_enough_bloc_spread(cluster, cfg):
+def test_insufficient_spread_is_not_reported(cluster, cfg):
+    """바깥에서도 널리 다뤄지지 않은 사건은 '내가 못 접한 것'이 아니다."""
     narrow = cluster.model_copy(update={"blocs": {"anglo"}})
-    v = gap.verdict(narrow, {"KR": _probe("not_covered"), "JP": _probe("not_covered")}, cfg)
-    assert not v.is_blindspot
-    assert "블록" in v.note
+    probes = {"KR": _probe("KR", "not_covered"), "JP": _probe("JP", "not_covered")}
+    v = gap.exposure(narrow, gap.home_coverage(probes), cfg)
+    assert v.tier == "insufficient_spread"
 
 
-def test_blindspot_requires_both_countries_to_have_missed_it(cluster, cfg):
-    """★ ADR 0005 의 핵심.
+def test_no_home_coverage_is_absent(cluster, cfg):
+    probes = {"KR": _probe("KR", "not_covered"), "JP": _probe("JP", "not_covered")}
+    v = gap.exposure(cluster, gap.home_coverage(probes), cfg)
+    assert v.tier == "absent"
+    assert v.exposure_gap == pytest.approx(len(cluster.blocs))
 
-    한국과 일본을 하나의 언론 환경으로 본다. 둘 다 안 다뤘을 때만 공백이다.
+
+def test_country_is_not_distinguished_once_coverage_exists(cluster, cfg):
+    """★ ADR 0006 의 핵심.
+
+    한국이 다뤘든 일본이 다뤘든 접할 기회가 있었던 것이다. 안쪽을 하나로
+    합치면 AND/OR 를 고민할 필요가 애초에 사라진다.
     """
-    v = gap.verdict(cluster, {"KR": _probe("not_covered"), "JP": _probe("not_covered")}, cfg)
-    assert v.is_blindspot
-    assert v.missed_by == {"KR", "JP"}
-    assert not v.is_divergent
-
-
-def test_one_country_covering_it_removes_it_from_the_blindspot_list(cluster, cfg):
-    """일본이 다뤘으면 이미 접한 것이다. OR 로 두면 일본어로 읽은 기사가
-    목록을 채워서 쓸모가 없어진다."""
-    v = gap.verdict(
-        cluster, {"KR": _probe("not_covered"), "JP": _probe("covered", 0.8)}, cfg
+    kr_only = gap.home_coverage(
+        {"KR": _probe("KR", "covered", 1, 0.8), "JP": _probe("JP", "not_covered")}
     )
-    assert not v.is_blindspot
-    assert v.is_divergent, "공백은 아니지만 한·일 엇갈림으로는 남는다"
-    assert v.covered_by == {"JP"} and v.missed_by == {"KR"}
-
-
-def test_both_covering_it_is_neither(cluster, cfg):
-    v = gap.verdict(
-        cluster, {"KR": _probe("covered", 0.8), "JP": _probe("covered", 0.9)}, cfg
+    jp_only = gap.home_coverage(
+        {"KR": _probe("KR", "not_covered"), "JP": _probe("JP", "covered", 1, 0.8)}
     )
-    assert not v.is_blindspot and not v.is_divergent
+    assert kr_only.article_count == jp_only.article_count == 1
+    a = gap.exposure(cluster, kr_only, cfg)
+    b = gap.exposure(cluster, jp_only, cfg)
+    assert a.tier == b.tier
+    assert a.exposure_gap == b.exposure_gap
 
 
-def test_uncertain_blocks_the_blindspot_call(cluster, cfg):
-    """★ ADR 0002. 한쪽이 애매하면 내가 이미 봤는지 알 수 없다."""
-    v = gap.verdict(
-        cluster, {"KR": _probe("not_covered"), "JP": _probe("uncertain", 0.45)}, cfg
+def test_sparse_home_coverage_is_underreported(cluster, cfg):
+    """'아예 안 다뤄진 것'과 '적게 다뤄진 것'이 같은 축에 있다."""
+    probes = {"KR": _probe("KR", "covered", 1, 0.8), "JP": _probe("JP", "not_covered")}
+    v = gap.exposure(cluster, gap.home_coverage(probes), cfg)
+    assert v.tier == "underreported"
+    assert 0 < v.exposure_gap < len(cluster.blocs)
+
+
+def test_ample_home_coverage_is_comparable(cluster, cfg):
+    probes = {
+        "KR": _probe("KR", "covered", 3, 0.8),
+        "JP": _probe("JP", "covered", 3, 0.8),
+    }
+    v = gap.exposure(cluster, gap.home_coverage(probes), cfg)
+    assert v.tier == "comparable"
+    assert not v.is_outside_view
+
+
+def test_exposure_gap_falls_as_home_coverage_rises(cluster, cfg):
+    gaps = [
+        gap.exposure(
+            cluster,
+            gap.home_coverage({"KR": _probe("KR", "covered", n, 0.8)}),
+            cfg,
+        ).exposure_gap
+        for n in (0, 1, 2, 5)
+    ]
+    assert gaps == sorted(gaps, reverse=True)
+
+
+def test_undecided_only_matters_when_nothing_was_found(cluster, cfg):
+    """★ 단순화의 이득.
+
+    안쪽 보도를 이미 찾았으면 다른 나라의 판정 불가는 결론을 바꾸지 못한다.
+    찾지 못했을 때만 '모른다'가 문제가 된다.
+    """
+    blocked = gap.home_coverage(
+        {"KR": _probe("KR", "uncertain", 0, 0.45), "JP": _probe("JP", "not_covered")}
     )
-    assert not v.is_blindspot
-    assert "JP" in v.undecided
-    assert "불확실" in v.undecided["JP"]
+    assert gap.exposure(cluster, blocked, cfg).tier == "undecided"
 
-
-def test_no_data_blocks_the_blindspot_call(cluster, cfg):
-    """★ ADR 0005. 피드가 고장난 나라를 미보도로 세면 공백이 폭증한다."""
-    v = gap.verdict(
-        cluster, {"KR": _probe("not_covered"), "JP": _probe("no_data", 0.0)}, cfg
+    found = gap.home_coverage(
+        {"KR": _probe("KR", "uncertain", 0, 0.45), "JP": _probe("JP", "covered", 1, 0.8)}
     )
-    assert not v.is_blindspot
-    assert "기사 없음" in v.undecided["JP"]
+    assert found.undecided == {}
+    assert gap.exposure(cluster, found, cfg).tier != "undecided"
 
 
-def test_no_probes_is_not_a_blindspot(cluster, cfg):
-    v = gap.verdict(cluster, {}, cfg)
-    assert not v.is_blindspot
+def test_no_data_also_yields_undecided(cluster, cfg):
+    """★ ADR 0005. 피드가 고장난 나라를 미보도로 세면 신호가 폭증한다."""
+    probes = {"KR": _probe("KR", "no_data", 0, 0.0), "JP": _probe("JP", "no_data", 0, 0.0)}
+    v = gap.exposure(cluster, gap.home_coverage(probes), cfg)
+    assert v.tier == "undecided"
+    assert "기사 없음" in v.note
+
+
+def test_probe_counts_every_article_above_threshold(cluster, articles, cfg, kr_article_factory):
+    """분량 축을 위해 임계값을 넘은 기사를 전부 센다."""
+    arts = [
+        kr_article_factory("수도 시위 진압 1", "경찰이 시위대 4500명을 해산시켰다.", 2.0),
+        kr_article_factory("수도 시위 진압 2", "경찰이 시위대 4500명을 해산시켰다.", 3.0),
+    ]
+    arts = [a.model_copy(update={"id": f"kr{i}"}) for i, a in enumerate(arts)]
+    probe = gap.probe_baseline(
+        cluster, articles, arts, "KR", fake_embed({"수도 시위": 0.95}), cfg
+    )
+    assert probe.decision == "covered"
+    assert len(probe.matched_article_ids) == 2
 
 
 def test_spread_score_prefers_blocs_over_article_count():

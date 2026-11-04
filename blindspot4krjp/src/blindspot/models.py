@@ -124,6 +124,10 @@ class Cluster(BaseModel):
     )
     wire_groups: int = Field(default=0, description="독립적인 편집 판단의 수 (전재 축약 후)")
     spread_score: float = Field(default=0.0, description="P8: 블록 수 기반")
+    entities: set[str] = Field(
+        default_factory=set,
+        description="별칭 사전으로 추출한 개체 id. '외부에서 본 한국·일본' 선별에 쓴다.",
+    )
 
 
 # ---------------------------------------------------------------- 보도 공백
@@ -157,39 +161,62 @@ class BaselineProbe(BaseModel):
     signals: MatchSignals | None = None
 
 
-class BlindspotVerdict(BaseModel):
-    """공백 판정 (ADR 0005).
+class HomeCoverage(BaseModel):
+    """안쪽 언론(내가 실제로 접하는 범위)의 보도 상황.
 
-    ★ 한국과 일본은 **하나의 언론 환경**이다. 두 독자가 아니라, 두 언론을
-    모두 소비하는 한 독자를 가정한다. 그러면 한국이 놓쳤어도 일본이 다룬
-    사건은 그 독자가 이미 본 것이므로 공백이 아니다.
+    ★ 국가를 구분하지 않는다 (ADR 0006).
+    목적은 "내가 접하는 언론의 바깥"을 찾는 것이므로, 한국이 다뤘는지
+    일본이 다뤘는지는 중요하지 않다. 어느 쪽이든 다뤘으면 접할 기회가
+    있었던 것이다. by_country 는 참고용으로만 남긴다.
+    """
 
-    따라서 공백 조건은 AND 다 — baseline 전체가 미보도일 때만 공백이다.
-    OR 로 두면 일본어로 이미 읽은 기사가 목록을 채워서 쓸모가 없어진다.
+    article_count: int = Field(default=0, description="안쪽에서 이 사건을 다룬 기사 수")
+    matched_article_ids: list[str] = Field(default_factory=list)
+    best_score: float = 0.0
+    by_country: dict[str, int] = Field(default_factory=dict, description="참고용 분해")
+    undecided: dict[str, str] = Field(
+        default_factory=dict, description="판정하지 못한 국가와 그 이유"
+    )
 
-    한쪽만 보도한 사건(`is_divergent`)은 공백이 아니지만 한·일 언론 간
-    보도 차이로서 따로 보여줄 가치가 있다.
+    @property
+    def has_coverage(self) -> bool:
+        return self.article_count > 0
+
+
+ExposureTier = Literal[
+    "absent",            # 안쪽 보도 0건 — 접할 기회가 아예 없었다
+    "underreported",     # 안쪽에서 다뤘지만 바깥에 비해 현저히 적다
+    "comparable",        # 안쪽 보도량이 바깥과 비슷하다
+    "undecided",         # 매칭이 애매하거나 안쪽 데이터가 없다
+    "insufficient_spread",  # 바깥에서도 널리 다뤄지지 않았다
+]
+
+
+class ExposureVerdict(BaseModel):
+    """노출 격차 판정 (ADR 0006).
+
+    이진 판정("다뤄졌나 / 안 다뤄졌나")을 **연속값**으로 바꿨다.
+    "아예 안 다뤄진 것"과 "적게 다뤄진 것"이 같은 축에 들어오므로,
+    안쪽 국가를 AND 로 묶느냐 OR 로 묶느냐 하는 문제가 애초에 사라진다.
+
+        exposure_gap = 바깥 독립 보도 블록 수 / (1 + 안쪽 기사 수)
+
+    분모의 +1 은 0 나눗셈을 막고, 안쪽 1건과 0건의 차이를 과장하지 않는다.
     """
 
     cluster_id: str
     event_label: str
     blocs: set[Bloc]
     spread_score: float
-    probes: dict[str, BaselineProbe] = Field(default_factory=dict)
-    is_blindspot: bool = Field(
-        default=False, description="baseline 전체가 미보도 (AND)"
-    )
-    missed_by: set[str] = Field(default_factory=set, description="미보도로 판정된 국가")
-    covered_by: set[str] = Field(default_factory=set, description="보도한 국가")
-    undecided: dict[str, str] = Field(
-        default_factory=dict, description="판정하지 못한 국가와 그 이유"
-    )
+    home: HomeCoverage = Field(default_factory=HomeCoverage)
+    exposure_gap: float = 0.0
+    tier: ExposureTier = "undecided"
     note: str = ""
 
     @property
-    def is_divergent(self) -> bool:
-        """한쪽은 다루고 한쪽은 안 다룬 사건. 공백은 아니지만 비교 가치가 있다."""
-        return bool(self.covered_by) and bool(self.missed_by)
+    def is_outside_view(self) -> bool:
+        """안쪽에서 접하기 어려웠던 사건 — 1차 관심 대상."""
+        return self.tier in ("absent", "underreported")
 
 
 # ---------------------------------------------------------------- 주장

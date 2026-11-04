@@ -12,7 +12,8 @@
   B 사헬 선거 분쟁      — 3블록 독립 · 한국 미보도 · 일본 미보도 → ★ 1차 공백
   C 메콩강 댐 (전재)    — 3블록에 실렸지만 통신사 1건           → 기준 미달 (ADR 0004)
   D 파나마 운하 협상    — 3블록 독립 · 한국 애매 · 일본 보도     → 판정 불가 (ADR 0002)
-  E 인도-파키스탄 국경  — 3블록 독립 · 한국 보도 · 일본 미보도   → ★ 2차 (한·일 엇갈림)
+  E 인도-파키스탄 국경  — 3블록 독립 · 안쪽 1건                 → 과소 보도
+  F 일본 방위비 증액    — 3블록 독립 · 안쪽 3건                 → ★ 외부에서 본 안쪽 이슈
 """
 
 from __future__ import annotations
@@ -142,6 +143,21 @@ def overseas_articles() -> list[Article]:
            "Border firing along LoC leaves posts damaged",
            "Seven posts were damaged in a border exchange of fire along the Line of "
            "Control in Kashmir, army sources said.", "en", 3),
+
+        # F — 일본 방위비. 안쪽에서도 충분히 보도됐지만, 바깥 언론이 어떤
+        #     틀로 쓰는지가 관심사다 → '외부에서 본 안쪽 이슈' 섹션.
+        _a("f1", "wapo",
+           "Japan moves to raise defence spending toward 2 percent",
+           "Japan will push defence spending toward 2 percent of GDP over 5 years, "
+           "officials said, in what Washington called a historic shift.", "en", 1),
+        _a("f2", "globaltimes",
+           "Japan accelerates military expansion, raising regional concerns",
+           "Japan's plan to lift military spending to 2 percent of GDP over 5 years "
+           "revives concerns about remilitarization, analysts in Beijing said.", "en", 2),
+        _a("f3", "thehindu",
+           "Japan defence budget plan reshapes Indo-Pacific calculus",
+           "Japan's move toward 2 percent of GDP in defence spending over 5 years is "
+           "being read in New Delhi as a shift in the Indo-Pacific balance.", "en", 3),
     ]
 
 
@@ -177,6 +193,18 @@ def baseline_articles() -> list[Article]:
            "인도와 파키스탄 양군이 카슈미르 국경에서 교전을 확인했으며 초소 7곳이 "
            "피해를 입었다고 밝혔다.", "ko", 6),
 
+        # F — 안쪽에서도 충분히 보도. 노출 격차는 작지만 외부 시선이 관심사다.
+        _a("jp_f1", "asahi",
+           "防衛費、GDP比2%へ 5年で段階的に引き上げ",
+           "政府は防衛費をGDP比2%に向けて5年で段階的に引き上げる方針を固めた。", "ja", 4),
+        _a("jp_f2", "japantimes",
+           "Japan to lift 防衛費 toward 2% of GDP",
+           "The government confirmed a 5-year path to 2 percent of GDP for defence "
+           "spending, officials said.", "en", 4),
+        _a("kr_f", "yonhap",
+           "일본, 방위비 GDP 2%로 단계적 증액",
+           "일본 정부가 5년에 걸쳐 방위비를 국내총생산 2% 수준으로 올리는 방안을 확정했다.", "ko", 4),
+
         # 잡음 — 두 나라 모두 그날 다른 기사를 냈다는 사실을 만든다.
         _a("kr_x", "yonhap",
            "국내 반도체 수출 3개월 연속 증가",
@@ -201,8 +229,10 @@ _TOPICS = {
     "Border": [0.0, 0.0, 0.0, 0.0, 1.0],
     "border": [0.0, 0.0, 0.0, 0.0, 1.0],
     "Échanges": [0.0, 0.0, 0.0, 0.0, 1.0],
+    "defence": [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+    "military expansion": [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
 }
-_DIM = 5
+_DIM = 6
 
 
 def embedder(texts):
@@ -233,7 +263,9 @@ def baseline_sim(query: str, candidates):
         elif "panama" in q and "파나마" in cand:
             sims.append(0.44)                      # D: 한국은 애매 구간
         elif "border" in q and "국경" in cand:
-            sims.append(0.90)                      # E: 한국만 보도
+            sims.append(0.90)                      # E: 안쪽 1건
+        elif "defence" in q and ("防衛費" in cand or "방위비" in cand):
+            sims.append(0.92)                      # F: 안쪽 3건
         else:
             sims.append(0.05)
     return sims

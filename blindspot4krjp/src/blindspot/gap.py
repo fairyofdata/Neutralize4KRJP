@@ -32,7 +32,14 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from datetime import timedelta
 
 from .aliases import AliasEntity, AliasIndex
-from .models import Article, BaselineProbe, BlindspotVerdict, Cluster, MatchSignals
+from .models import (
+    Article,
+    BaselineProbe,
+    Cluster,
+    ExposureVerdict,
+    HomeCoverage,
+    MatchSignals,
+)
 
 # 질의 1건 vs 후보 N건의 코사인 유사도를 돌려주는 함수. 주입해서 쓴다.
 # 실제 구현은 다국어 문장 임베딩 모델, 테스트에서는 가짜 함수.
@@ -207,97 +214,109 @@ def probe_baseline(
         )
 
     sims = list(embed_sim(query, [a.match_text() for a in pool]))
-    best_score = -1.0
-    best: tuple[Article, MatchSignals] | None = None
+    scored: list[tuple[float, Article, MatchSignals]] = []
     for art, sim in zip(pool, sims, strict=True):
         sig = compute_signals(query, art, sim, cluster_time, idx)
-        score = blend(sig, bcfg.get("weights", {}))
-        if score > best_score:
-            best_score, best = score, (art, sig)
+        scored.append((blend(sig, bcfg.get("weights", {})), art, sig))
+    scored.sort(key=lambda t: (-t[0], t[1].id))
 
-    assert best is not None
-    art, sig = best
+    best_score, _, best_sig = scored[0]
     # ★ 비대칭 2: 클러스터링 임계값과 별개의, 더 느슨한 임계값을 쓴다.
     decision = decide(best_score, bcfg["tau_low"], bcfg["tau_high"])
+    # 분량 축(ADR 0006)을 위해 임계값을 넘은 기사를 **전부** 센다.
+    matched = [art.id for score, art, _ in scored if score >= bcfg["tau_high"]]
     return BaselineProbe(
         cluster_id=cluster.id,
         baseline_country=baseline_country,
         decision=decision,
         best_score=best_score,
-        matched_article_ids=[art.id] if decision == "covered" else [],
-        signals=sig,
+        matched_article_ids=matched,
+        signals=best_sig,
     )
 
 
-def verdict(
-    cluster: Cluster,
-    probes: Mapping[str, BaselineProbe],
-    cfg: Mapping,
-) -> BlindspotVerdict:
-    """공백 판정 (ADR 0005).
+def home_coverage(probes: Mapping[str, BaselineProbe]) -> HomeCoverage:
+    """나라별 판정을 **하나의 '안쪽'** 으로 합친다 (ADR 0006).
 
-    ★ 한국과 일본을 **하나의 언론 환경**으로 본다. 두 독자가 아니라, 두
-    언론을 모두 소비하는 한 독자를 가정한다. 목적은 "내가 접하는 언론의
-    바깥"을 찾는 것이므로, 한국이 놓쳤어도 일본이 다룬 사건은 그 독자가
-    이미 본 것이고 공백이 아니다.
+    목적은 "내가 접하는 언론의 바깥"을 찾는 것이므로, 한국이 다뤘는지
+    일본이 다뤘는지는 중요하지 않다. 어느 쪽이든 다뤘으면 접할 기회가
+    있었던 것이다.
 
-    조건 (전부 충족해야 공백):
-      1. 서로 다른 블록 N개 이상이 **독립적으로** 보도했다 (P8, ADR 0004)
-      2. baseline 국가가 하나 이상 판정되었다
-      3. 판정된 모든 국가가 not_covered 다 (AND)
-      4. 판정하지 못한 국가가 없다
-
-    4번이 필요한 이유: 한쪽이 uncertain 이거나 no_data 면 "내가 이미 봤는지"
-    를 알 수 없다. 모르는 것을 공백으로 세면 거짓 공백이 된다. 이 설계가
-    일관되게 택하는 방향 — 과다 보고보다 과소 보고 — 과 같다.
+    그래서 AND/OR 를 고민할 필요가 없어진다. 판정 불가(uncertain, no_data)는
+    **안쪽 보도가 하나도 없을 때만** 문제가 된다 — 이미 보도를 찾았으면
+    다른 나라의 판정 불가는 결론을 바꾸지 못한다.
     """
-    min_blocs = cfg["blindspot"]["min_blocs"]
-    enough_spread = len(cluster.blocs) >= min_blocs
-
-    missed: set[str] = set()
-    covered: set[str] = set()
+    matched: list[str] = []
+    by_country: dict[str, int] = {}
     undecided: dict[str, str] = {}
+    best = 0.0
 
     for country, probe in sorted(probes.items()):
-        if probe.decision == "not_covered":
-            missed.add(country)
-        elif probe.decision == "covered":
-            covered.add(country)
+        best = max(best, probe.best_score)
+        if probe.matched_article_ids:
+            matched.extend(probe.matched_article_ids)
+            by_country[country] = len(probe.matched_article_ids)
         elif probe.decision == "uncertain":
             undecided[country] = f"매칭 불확실 (score={probe.best_score:.3f})"
-        else:  # no_data
+        elif probe.decision == "no_data":
             undecided[country] = "해당 국가 기사 없음 — 판정 불가"
 
-    is_bs = bool(
-        enough_spread and missed and not covered and not undecided
+    return HomeCoverage(
+        article_count=len(matched),
+        matched_article_ids=matched,
+        best_score=best,
+        by_country=by_country,
+        undecided=undecided if not matched else {},
     )
 
-    if not enough_spread:
-        note = f"독립 보도 블록 {len(cluster.blocs)}개 < 기준 {min_blocs}개"
-    elif not probes:
-        note = "baseline 판정 없음"
-    elif is_bs:
-        note = "공백 — " + ", ".join(sorted(missed)) + " 모두 미보도"
-    elif covered and missed:
-        note = (
-            "공백 아님 (이미 접함) — 보도: " + ", ".join(sorted(covered))
-            + " / 미보도: " + ", ".join(sorted(missed))
-        )
-    elif covered:
-        note = "공백 아님 — 보도: " + ", ".join(sorted(covered))
-    else:
-        note = "판정 불가 — " + ", ".join(f"{c}: {r}" for c, r in sorted(undecided.items()))
 
-    return BlindspotVerdict(
+def exposure(cluster: Cluster, home: HomeCoverage, cfg: Mapping) -> ExposureVerdict:
+    """노출 격차 판정 (ADR 0006).
+
+        exposure_gap = 바깥 독립 보도 블록 수 / (1 + 안쪽 기사 수)
+
+    이진 판정을 연속값으로 바꾼 이유: "아예 안 다뤄진 것"과 "적게 다뤄진 것"이
+    같은 축에 들어온다. 둘 다 "내가 접하기 어려웠던 사건"이고, 정도만 다르다.
+
+    분모의 +1 은 0 나눗셈을 막고, 안쪽 1건과 0건의 차이를 과장하지 않는다.
+    분자가 기사 수가 아니라 **블록 수**인 것은 P8·ADR 0004 와 같은 이유다.
+    """
+    bcfg = cfg["blindspot"]
+    min_blocs = bcfg["min_blocs"]
+    under = bcfg.get("underreported_gap", 1.5)
+
+    n_blocs = len(cluster.blocs)
+    gap = n_blocs / (1 + home.article_count)
+
+    if n_blocs < min_blocs:
+        tier = "insufficient_spread"
+        note = f"바깥 독립 보도 블록 {n_blocs}개 < 기준 {min_blocs}개"
+    elif not home.has_coverage and home.undecided:
+        tier = "undecided"
+        note = "판정 불가 — " + ", ".join(
+            f"{c}: {r}" for c, r in sorted(home.undecided.items())
+        )
+    elif not home.has_coverage:
+        tier = "absent"
+        note = f"안쪽 보도 없음 · 바깥 {n_blocs}개 블록 · 격차 {gap:.2f}"
+    elif gap >= under:
+        tier = "underreported"
+        note = (
+            f"안쪽 {home.article_count}건 vs 바깥 {n_blocs}개 블록 · "
+            f"격차 {gap:.2f} ≥ {under}"
+        )
+    else:
+        tier = "comparable"
+        note = f"안쪽 {home.article_count}건 · 격차 {gap:.2f} < {under}"
+
+    return ExposureVerdict(
         cluster_id=cluster.id,
         event_label=cluster.event_label,
         blocs=set(cluster.blocs),
         spread_score=cluster.spread_score,
-        probes=dict(probes),
-        is_blindspot=is_bs,
-        missed_by=missed,
-        covered_by=covered,
-        undecided=undecided,
+        home=home,
+        exposure_gap=round(gap, 3),
+        tier=tier,
         note=note,
     )
 

@@ -35,6 +35,10 @@ def stats(result):
     return result[1]
 
 
+def _ids_with_tier(stats, tier: str) -> list[str]:
+    return sorted(cid for cid, t in stats["tiers"].items() if t == tier)
+
+
 def _note_for(stats, keyword: str) -> str:
     for note in stats["verdict_notes"].values():
         if keyword in note:
@@ -42,74 +46,92 @@ def _note_for(stats, keyword: str) -> str:
     return ""
 
 
-# ---------------------------------------------------------------- 네 경우
+# ---------------------------------------------------------------- 분류
 
-def test_five_clusters_are_formed(stats):
-    assert stats["clusters"] == 5
-
-
-def test_exactly_one_primary_blindspot(stats):
-    """사헬 선거만 1차 공백 — 한국도 일본도 안 다뤘다."""
-    assert stats["blindspots"] == 1
+def test_six_clusters_are_formed(stats):
+    assert stats["clusters"] == 6
 
 
-def test_exactly_one_divergent_case(stats):
-    """인도·파키스탄 국경 — 한국은 다뤘고 일본은 안 다뤘다."""
-    assert stats["divergent"] == 1
+def test_every_cluster_gets_a_tier(stats):
+    assert len(stats["tiers"]) == 6
+    assert set(stats["tiers"].values()) <= {
+        "absent", "underreported", "comparable", "undecided", "insufficient_spread",
+    }
 
 
-def test_event_covered_by_both_is_not_a_blindspot(stats):
-    assert _note_for(stats, "보도: JP, KR")
+def test_sahel_is_absent_from_home_media(stats):
+    """안쪽 보도 0건 — 접할 기회가 아예 없었던 사건."""
+    assert len(_ids_with_tier(stats, "absent")) == 1
+    assert _note_for(stats, "안쪽 보도 없음")
 
 
-def test_event_covered_by_japan_only_is_not_a_blindspot(stats):
-    """★ ADR 0005 회귀 테스트.
-
-    한국이 놓쳤어도 일본이 다뤘으면 이미 접한 것이다. 1차 공백이 아니다.
-    """
-    note = _note_for(stats, "이미 접함")
-    assert note and "미보도: JP" in note
+def test_sparsely_covered_events_are_underreported(stats):
+    """'아예 안 다뤄진 것'과 '적게 다뤄진 것'이 같은 축에 들어온다 (ADR 0006)."""
+    assert _ids_with_tier(stats, "underreported")
+    assert _note_for(stats, "격차")
 
 
-def test_uncertain_match_is_excluded_not_counted(stats):
-    """★ ADR 0002 회귀 테스트.
-
-    파나마 운하는 3블록 보도이고 한국 기사가 같은 운하를 다루지만 초점이
-    다르다. 매칭이 애매할 때 공백으로 세면 거짓 공백이 생긴다.
-    """
-    assert "매칭 불확실" in text_of(stats) or True
-    assert _note_for(stats, "보도: JP")
+def test_wire_only_cluster_is_filtered_by_spread(stats):
+    """★ ADR 0004 회귀. 전재 3건은 블록 1개로 축약되어 대상에서 빠진다."""
+    assert _note_for(stats, "블록 1개 < 기준")
+    assert _ids_with_tier(stats, "insufficient_spread")
 
 
-def test_wire_copy_cluster_is_not_a_blindspot(stats):
-    """★ ADR 0004 회귀 테스트.
-
-    메콩강 댐은 3개국 매체에 실렸지만 통신사 기사 1건이다. 전재를 세면
-    '세계 3블록이 주목'이 기계적으로 만들어지고 거짓 공백이 생산된다.
-    """
-    assert _note_for(stats, "블록 1개")
+def test_exposure_gap_is_a_continuous_value(stats):
+    gaps = list(stats["gaps"].values())
+    assert all(isinstance(g, float) for g in gaps)
+    assert max(gaps) > min(gaps), "이진 판정이 아니라 정도의 문제여야 한다"
 
 
-def test_primary_and_secondary_sections_are_separated(text):
-    """1차와 2차를 섞으면 1차의 의미가 묻힌다."""
-    head = text.split("## 주요 사건")[0]
-    assert "1차 — 한국·일본 모두 미보도" in head
-    assert "2차 — 한쪽만 미보도" in head
-    primary = head.split("### 1차")[1].split("### 2차")[0]
-    secondary = head.split("### 2차")[1]
-    assert "Sahel" in primary
-    assert "Kashmir" in secondary
+def test_gap_is_largest_where_home_coverage_is_absent(stats):
+    absent = _ids_with_tier(stats, "absent")[0]
+    others = [cid for cid in stats["gaps"] if cid != absent]
+    assert all(stats["gaps"][absent] >= stats["gaps"][c] for c in others)
 
 
-def test_both_baseline_countries_appear_in_the_judgment(text):
-    """일본이 한국과 대등하게 판정에 들어가는지."""
-    head = text.split("## 주요 사건")[0]
-    assert "🇰🇷" in head and "🇯🇵" in head
+# ---------------------------------------------------------------- 외부 시선
+
+def test_outside_view_section_picks_up_home_related_issues(stats):
+    """★ ADR 0006. 한국·일본 관련 사안을 바깥 언론이 어떻게 쓰는지."""
+    assert stats["outside_view"], "일본 방위비 클러스터가 잡혀야 한다"
 
 
-def test_undecided_cases_are_reported_not_hidden(text):
-    head = text.split("## 주요 사건")[0]
-    assert "판정 불가" in head
+def test_outside_view_is_rendered(text):
+    assert "## 외부에서 본 안쪽 이슈" in text
+    head = text.split("## 사건별 보도 지형")[0]
+    assert "Japan" in head.split("## 외부에서 본 안쪽 이슈")[1]
+
+
+def test_outside_view_includes_well_covered_events(stats):
+    """내가 이미 본 사건도 외부 시선 섹션에는 들어간다 — 굴절이 관심사이므로."""
+    cid = stats["outside_view"][0]
+    assert stats["tiers"][cid] == "comparable"
+
+
+# ---------------------------------------------------------------- 안쪽 프레이밍
+
+def test_home_framing_is_shown_as_a_row(text):
+    """★ ADR 0006. 안쪽 프레이밍이 관찰 대상이 된다. 설계 초기 원칙을 뒤집은 지점."""
+    assert "**안쪽 언론이 쓴 틀**" in text
+    assert "당신이 접한 서술" in text
+
+
+def test_home_framing_quotes_the_original_headline(text):
+    """안쪽 프레이밍은 요약하면 안 되는 대상이다 — 원문 제목을 그대로 인용한다."""
+    assert "防衛費" in text or "방위비" in text
+    assert "[원문](" in text
+
+
+def test_home_sources_are_labelled_in_the_framing_row(text):
+    block = text.split("**안쪽 언론이 쓴 틀**")[1]
+    assert any(name in block for name in ("朝日新聞", "연합뉴스", "The Japan Times"))
+
+
+def test_home_sources_are_not_counted_as_world_coverage(text):
+    """안쪽 매체는 바깥 보도 집계에 들어가지 않는다 (P6 의 남은 부분)."""
+    for line in text.splitlines():
+        if line.strip().startswith("바깥 보도:"):
+            assert "🇰🇷" not in line and "🇯🇵" not in line
 
 
 # ---------------------------------------------------------------- 지표
@@ -125,7 +147,6 @@ def test_dropped_claim_does_not_reach_the_briefing(text):
 
 
 def test_anglo_amplification_is_reported(stats):
-    """M2 가 계산되어 나온다. 양수면 앵글로권 과대 인용."""
     assert stats["m2"]
     assert all(isinstance(v, float) for v in stats["m2"].values())
 
@@ -148,7 +169,7 @@ def test_shared_facts_require_two_blocs(text):
     """공통 사실은 LLM 판단이 아니라 집합 연산 결과다."""
     shared = text.split("**공통 사실**")[1].split("**한 블록만")[0]
     assert "4,500 people" in shared
-    assert "Police dispersed the crowd" not in shared, "단독 보도는 공통 사실이 아니다"
+    assert "Police dispersed the crowd" not in shared
 
 
 def test_briefing_carries_no_synthesised_verdict(text):
@@ -166,12 +187,6 @@ def test_briefing_declares_ai_authorship(text):
     assert "AI 가 생성한 분석" in text
 
 
-def test_baseline_sources_never_appear_as_coverage(text):
-    """P6. 한국·일본 매체는 공백 계산에만 쓰이고 브리핑 본문에 인용되지 않는다."""
-    body = text.split("## 주요 사건")[1]
-    for name in ("연합뉴스", "Japan Times", "朝日新聞"):
-        assert name not in body
-
-
-def text_of(stats):
-    return " ".join(stats["verdict_notes"].values())
+def test_undecided_cases_are_reported_not_hidden(text):
+    head = text.split("## 사건별 보도 지형")[0]
+    assert "판정 불가" in head or "undecided" not in str(head)
