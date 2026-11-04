@@ -1,0 +1,26 @@
+# 모든 임계값은 Phase 1 에서 손 라벨로 보정한다 (eval/gap_calibration.py).
+# 지금 값은 측정된 값이 아니라 출발점이다.
+
+cluster:
+  window_hours: 36          # 해외 소스 클러스터링 윈도우
+  cosine_threshold: 0.62    # 미보정
+  min_cluster_size: 2
+
+baseline:
+  # ★ 비대칭 설계. 근거는 docs/decisions/0002 참조.
+  window_hours: 72          # baseline(KR/JP) 쪽은 더 넓게. 한국 보도는 흔히 지연된다.
+  tau_high: 0.58            # 이상 → covered
+  tau_low: 0.34             # 미만 → not_covered
+                            # 사이 → uncertain (공백 목록에서 제외하고 집계)
+  query_top_k: 3            # 클러스터 대표 기사 수
+  weights:
+    embedding: 0.6
+    entity: 0.25
+    numeric: 0.15
+
+blindspot:
+  min_blocs: 3              # 서로 다른 블록 N개 이상이 보도했을 때만 공백 후보
+
+budget:
+  max_llm_calls_per_day: 40
+  max_llm_tokens_per_day: 200000

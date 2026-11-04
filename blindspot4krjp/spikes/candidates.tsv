@@ -1,0 +1,32 @@
+# bloc	country	source_id	candidate_url	note
+anglo	US	ap	https://apnews.com/index.rss	AP 공개 RSS 현행 확인 필요
+anglo	US	npr_world	https://feeds.npr.org/1004/rss.xml	
+anglo	US	nyt_world	https://rss.nytimes.com/services/xml/rss/nyt/World.xml	초록까지만. 본문 금지
+anglo	US	wapo_world	https://feeds.washingtonpost.com/rss/world	
+anglo	US	foxnews_world	https://moxie.foxnews.com/google-publisher/world.xml	우파 축
+anglo	US	wsj_world	https://feeds.a.dj.com/rss/RSSWorldNews.xml	유료장벽
+anglo	US	reuters_world	https://www.reuters.com/arc/outboundfeeds/rss/?outputType=xml	공개 RSS 폐지 가능성 높음
+anglo	UK	bbc_world	https://feeds.bbci.co.uk/news/world/rss.xml	
+anglo	UK	guardian_world	https://www.theguardian.com/world/rss	Open Platform API 도 별도 확인
+anglo	UK	telegraph_world	https://www.telegraph.co.uk/world-news/rss.xml	우파 축
+eu	FR	france24_en	https://www.france24.com/en/rss	공영 영문판
+eu	FR	lemonde_intl	https://www.lemonde.fr/international/rss_full.xml	불어 원문
+eu	FR	rfi_en	https://www.rfi.fr/en/rss	
+eu	DE	dw_en	https://rss.dw.com/rdf/rss-en-all	공영
+eu	DE	spiegel_intl	https://www.spiegel.de/international/index.rss	
+eu	DE	faz_politik	https://www.faz.net/rss/aktuell/politik/	독어 원문
+mena	QA	aljazeera_en	https://www.aljazeera.com/xml/rss/all.xml	
+sea	SG	cna	https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml	
+sea	SG	straitstimes_world	https://www.straitstimes.com/news/world/rss.xml	
+sinosphere	TW	focustaiwan	https://focustaiwan.tw/rss/politics	대만 중앙통신 영문
+sinosphere	TW	taipeitimes	https://www.taipeitimes.com/xml/index.rss	
+sinosphere	CN	globaltimes	https://www.globaltimes.cn/rss/outbrain.xml	party_organ 계열. 라벨 필수
+sinosphere	CN	chinadaily_world	https://www.chinadaily.com.cn/rss/world_rss.xml	state_owned
+sinosphere	CN	xinhua_en	https://english.news.cn/rss/world.xml	국가통신사
+russia	RU	tass_en	https://tass.com/rss/v2.xml	state_owned. 라벨 필수
+russia	RU	moscowtimes	https://www.themoscowtimes.com/rss/news	망명 독립매체. 대조군
+southasia	IN	thehindu_intl	https://www.thehindu.com/news/international/feeder/default.rss	
+# --- role=baseline : 보도 공백 계산 전용. 브리핑 본문 투입 금지 (P6) ---
+baseline	KR	yonhap	https://www.yna.co.kr/rss/news.xml	
+baseline	KR	koreaherald	https://www.koreaherald.com/rss/020000000000.xml	
+baseline	JP	japantimes	https://www.japantimes.co.jp/feed/	
