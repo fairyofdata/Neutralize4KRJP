@@ -115,8 +115,15 @@ class Cluster(BaseModel):
     article_ids: list[str] = Field(min_length=1)
     event_label: str = Field(description="사람이 읽을 사건명. 사실 주장이 아니다.")
     countries: set[str] = Field(default_factory=set)
-    blocs: set[Bloc] = Field(default_factory=set)
-    spread_score: float = Field(default=0.0, description="P7: 블록 수 기반")
+    blocs: set[Bloc] = Field(
+        default_factory=set,
+        description="판정에 쓰는 블록 집합. 통신사 전재는 축약되어 한 번만 센다 (ADR 0004)",
+    )
+    blocs_with_pickups: set[Bloc] = Field(
+        default_factory=set, description="표시용. 전재를 포함한 블록 집합"
+    )
+    wire_groups: int = Field(default=0, description="독립적인 편집 판단의 수 (전재 축약 후)")
+    spread_score: float = Field(default=0.0, description="P8: 블록 수 기반")
 
 
 # ---------------------------------------------------------------- 보도 공백

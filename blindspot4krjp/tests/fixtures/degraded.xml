@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel>
+  <title>Fixture Degraded (synthetic)</title>
+  <item>
+    <title>Item with no date at all</title>
+    <description>This one must be skipped.</description>
+    <link>https://fixture.test/nodate</link>
+  </item>
+  <item>
+    <title></title>
+    <description>Empty title, must be skipped.</description>
+    <link>https://fixture.test/notitle</link>
+    <pubDate>Tue, 03 Nov 2026 10:00:00 GMT</pubDate>
+  </item>
+  <item>
+    <title>Item with a relative link</title>
+    <description>No absolute URL, must be skipped.</description>
+    <link>/relative/path</link>
+    <pubDate>Tue, 03 Nov 2026 10:00:00 GMT</pubDate>
+  </item>
+  <item>
+    <title>Ancient backfilled item</title>
+    <description>Far outside the age window.</description>
+    <link>https://fixture.test/old</link>
+    <pubDate>Mon, 01 Jan 2024 10:00:00 GMT</pubDate>
+  </item>
+  <item>
+    <title>Lead that merely echoes the headline</title>
+    <description>Lead that merely echoes the headline</description>
+    <link>https://fixture.test/echo</link>
+    <pubDate>Tue, 03 Nov 2026 10:00:00 GMT</pubDate>
+  </item>
+  <item>
+    <title>Same story, tracking params differ</title>
+    <description>Should collapse with the next one.</description>
+    <link>https://fixture.test/dupe?utm_campaign=a</link>
+    <pubDate>Tue, 03 Nov 2026 10:00:00 GMT</pubDate>
+  </item>
+  <item>
+    <title>Same story, tracking params differ (again)</title>
+    <description>Duplicate canonical URL.</description>
+    <link>https://fixture.test/dupe?utm_campaign=b</link>
+    <pubDate>Tue, 03 Nov 2026 10:05:00 GMT</pubDate>
+  </item>
+</channel></rss>

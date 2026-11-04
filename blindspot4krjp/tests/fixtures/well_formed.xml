@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel>
+  <title>Fixture Wire (synthetic)</title>
+  <item>
+    <title>Capital City protests met with police response</title>
+    <description>&lt;p&gt;Police dispersed some 4,500 demonstrators on Tuesday, according to officials.&lt;/p&gt;</description>
+    <link>https://fixture.test/a?utm_source=rss&amp;id=1</link>
+    <pubDate>Tue, 03 Nov 2026 12:00:00 GMT</pubDate>
+  </item>
+  <item>
+    <title>Trade ministers meet over tariff dispute</title>
+    <description>Delegates from six countries opened talks in Geneva.</description>
+    <link>https://fixture.test/b</link>
+    <pubDate>Tue, 03 Nov 2026 09:30:00 GMT</pubDate>
+  </item>
+</channel></rss>

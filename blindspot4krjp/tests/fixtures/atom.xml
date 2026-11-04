@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Fixture Atom (synthetic)</title>
+  <entry>
+    <title>Atom entry about the summit</title>
+    <link href="https://fixture.test/atom-1"/>
+    <updated>2026-11-03T08:00:00Z</updated>
+    <summary>Leaders of three countries met to discuss maritime security.</summary>
+  </entry>
+  <entry>
+    <title>Atom entry with content only</title>
+    <link href="https://fixture.test/atom-2"/>
+    <updated>2026-11-03T07:00:00Z</updated>
+    <content type="html">&lt;p&gt;The joint statement ran to 12 paragraphs.&lt;/p&gt;</content>
+  </entry>
+</feed>

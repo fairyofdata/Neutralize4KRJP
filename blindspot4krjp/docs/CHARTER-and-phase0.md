@@ -1,6 +1,12 @@
 # Blindspot4KRJP — 프로젝트 헌장 및 Phase 0 작업 지시
 
-이 저장소에는 **스키마·보도 공백 판정 로직·검증 도구·조사 스크립트가 이미 들어 있습니다** (테스트 48건 통과). 수집·클러스터링·LLM·렌더링은 비어 있습니다.
+이 저장소에는 **Phase 1 골격이 이미 들어 있습니다** (테스트 126건 통과, 네트워크·API 키·비용 0). 합성 데이터로 브리핑 한 부가 끝까지 생성됩니다:
+
+```bash
+python scripts/demo_briefing.py
+```
+
+비어 있는 것은 **실제 피드 결합**(Phase 0 이 끝나야 가능), 실제 임베딩 모델 결합, LLM 주장 추출(Phase 2), 발행 자동화(Phase 4) 입니다.
 
 > **이번 세션의 범위: Phase 0 (소스 접근성 검증) 만.**
 > 파이프라인·LLM·UI 코드를 쓰지 마십시오. §7 의 산출물만 만들고 끝냅니다.
@@ -141,23 +147,35 @@
 
 ## 4. 이미 구현된 것 / 비어 있는 것
 
-**구현됨** (`pytest -q` → 48 passed, 네트워크·API 키·비용 0):
+**구현됨** — `pytest -q` → 126 passed. 외부 호출은 전부 주입된 가짜와 동결 fixture 로 대체되므로 테스트가 네트워크도 돈도 쓰지 않습니다.
 
 | 파일 | 내용 |
 |---|---|
-| `src/blindspot/models.py` | 전체 스키마. P1·P2·P5·P9 를 타입과 validator 로 강제 |
-| `src/blindspot/gap.py` | ★ 비대칭 공백 판정. `probe_baseline` / `decide` / `verdict` / 숫자·개체 신호 |
-| `src/blindspot/provenance.py` | P2 집행 validator (순수 함수) + M1 산출 |
+| `src/blindspot/models.py` | 전체 스키마. 원칙을 타입과 validator 로 강제 |
+| `src/blindspot/ingest/rss.py` | 범용 RSS/Atom 어댑터. ★ 리드를 600자로 잘라 P9 를 집행 |
+| `src/blindspot/dedupe.py` | ★ 통신사 전재 축약 (ADR 0004) |
+| `src/blindspot/cluster.py` | 평균 연결 클러스터링. 임베딩 주입. baseline 유입 시 예외 (P6) |
+| `src/blindspot/gap.py` | ★ 비대칭 공백 판정 (ADR 0002) |
+| `src/blindspot/aliases.py` + `aliases.yaml` | 개체 별칭 사전 112개. 문자 체계별 매칭 (ADR 0003) |
+| `src/blindspot/provenance.py` | P2 집행 validator + M1 |
 | `src/blindspot/derive.py` | 공통 사실·단독 보도·서술 차이 집합 연산 + M2 |
+| `src/blindspot/render.py` | Markdown 브리핑 |
 | `src/blindspot/sources.py` | `sources.yaml` 로더 + Phase 0 DoD 자동 점검 |
-| `spikes/probe_sources.py` | ★ 피드 조사 스크립트. 정책 차단과 사이트 장애를 구분 보고 |
-| `eval/gap_calibration.py` | 임계값 보정 하네스. 정밀도 우선 운영점 권고 |
-| `tests/` (48건) | 위 전부. P1·P9·P10 을 테스트가 기계 검사 |
-| `docs/decisions/0002` | 비대칭 검색 ADR |
+| `spikes/probe_sources.py` | ★ 피드 조사. 정책 차단과 사이트 장애를 구분 보고 |
+| `scripts/build_aliases_from_wikidata.py` | 별칭 사전 생성기 (네트워크 필요, 미실행) |
+| `scripts/demo_briefing.py` + `eval/demo_world.py` | 합성 데이터 종단 데모 |
+| `eval/gap_calibration.py` | 임계값 보정 하네스 |
 
-**비어 있음:** `ingest/` (어댑터), 임베딩·클러스터링, `analyze.py` (LLM 주장 추출), `render.py`, `aliases.yaml`, M3.
+**비어 있음:** 실제 임베딩 모델 결합(`cluster.Embedder` 주입만 하면 됨), `analyze.py`(LLM 주장 추출), 발행 자동화, M3, 소스별 health check.
 
-**실측값 없음:** `config.yaml` 의 모든 임계값, `sources.yaml` (템플릿만 있음), `docs/source-audit.md` (틀만 있음).
+**실측값 없음:** `config.yaml` 의 모든 임계값(클러스터링·공백 판정·전재 축약), `sources.yaml`(템플릿만), `docs/source-audit.md`(틀만).
+
+### 설계 결정 기록
+
+- `docs/decisions/0001` — Phase 0 소스 선정 (진행 중, **사용자 판단 필요한 질문 4개**)
+- `docs/decisions/0002` — ★ 공백 판정을 비대칭 검색으로
+- `docs/decisions/0003` — 별칭 사전은 시드 + Wikidata 생성본
+- `docs/decisions/0004` — ★ 통신사 전재는 블록 집계 전에 축약
 
 ### 핵심 스키마 (`models.py` 참조)
 
@@ -166,14 +184,15 @@ class Article(BaseModel):
     id, source_id, url, title_orig, lead_orig, lang, published_at, fetched_at
     # body / full_text / content 필드는 의도적으로 없음 (P9). 추가하지 말 것.
 
-class BaselineProbe(BaseModel):
-    """★ 3분기 판정. 'uncertain' 이 존재하는 것이 핵심이다."""
-    cluster_id, baseline_country
-    decision: Literal["covered", "not_covered", "uncertain"]
-    best_score, matched_article_ids, signals
+class Cluster(BaseModel):
+    blocs                # 판정용. 전재 축약 후, origin 귀속 (ADR 0004)
+    blocs_with_pickups   # 표시용. 전재 포함
+    wire_groups          # 독립적인 편집 판단의 수
+    spread_score         # P8: 블록 수 기반
 
-class MatchSignals(BaseModel):
-    embedding_max, entity_overlap, numeric_overlap, time_delta_hours
+class BaselineProbe(BaseModel):
+    decision: Literal["covered", "not_covered", "uncertain"]   # ★ 3분기
+    best_score, matched_article_ids, signals
 
 class Claim(BaseModel):
     text_en
@@ -183,17 +202,15 @@ class Claim(BaseModel):
 
 class ClusterAnalysis(BaseModel):
     cluster_id, claims
-    # P1: conclusion / assessment / neutral_summary 없음.
+    # P1: 종합 의견 필드 없음. 공통 사실은 derive.py 가 계산한다.
 ```
-
----
 
 ## 5. 단계 계획
 
 | Phase | 내용 | LLM 호출 | 완료 조건 |
 |---|---|---|---|
 | **0** | **소스 접근성 검증** | 0 | `sources.yaml` 확정 + `docs/source-audit.md` 실측 |
-| 1 | ingest → 임베딩 → 클러스터링 → 비대칭 공백 판정 → 리포트 | **0** | 하루치 마크다운 리포트가 손으로 봐도 맞다 |
+| 1 | ingest → 임베딩 → 클러스터링 → 비대칭 공백 판정 → 리포트 | **0** | **골격 완료.** 남은 것은 실제 피드·임베딩 결합 |
 | 1.5 | **공백 판정 보정** | 0 | 50건 손 라벨 → 정밀도·재현율 숫자 확보 |
 | 2 | 주장 추출 + validator + 파생 집계 + 서술 차이 대조표 | 클러스터당 1 | 상위 5 클러스터 대조표 생성 |
 | 3 | 평가 하네스 완성 (M3) + 동결 fixture 결정론적 테스트 | 평가용 | README 에 숫자를 쓸 수 있다 |
@@ -277,7 +294,8 @@ python spikes/probe_sources.py --only bbc_world,dw_en,yonhap
 - [ ] `sources.yaml` 이 `phase0_report()["passed"] == True`
 - [ ] 비 RSS 경로 2개 조사 결과가 ADR 0001 에 반영
 - [ ] 사용자에게 올릴 질문이 정리됨
-- [ ] `pytest -q` 가 계속 통과 (새 소스 추가로 깨지면 안 된다)
+- [ ] `pytest -q` 가 계속 통과 (126건, 새 소스 추가로 깨지면 안 된다)
+- [ ] `python scripts/demo_briefing.py` 가 계속 돌아간다
 - [ ] README 의 「현재 상태」가 갱신됨. 성능·중립성을 선전하지 않는다 (P10)
 
 ### 이번 세션에서 하지 말 것
@@ -310,4 +328,6 @@ python spikes/probe_sources.py --only bbc_world,dw_en,yonhap
 
 ---
 
-**시작하십시오.** 먼저 `pytest -q` 로 스캐폴드가 온전한지 확인하고, 그다음 §7 의 네트워크 점검을 하십시오. 막혀 있으면 사용자에게 호스트 목록을 전달한 뒤, 네트워크가 필요 없는 산출물부터 만드십시오.
+**시작하십시오.** 먼저 `pytest -q` 와 `python scripts/demo_briefing.py` 로 스캐폴드가 온전한지 확인하십시오. 그다음 §7 의 네트워크 점검을 하십시오. 막혀 있으면 사용자에게 호스트 목록을 전달한 뒤, 네트워크가 필요 없는 산출물부터 만드십시오.
+
+Phase 0 이 끝나면 다음 작업은 둘입니다. (a) 실제 임베딩 모델을 `cluster.Embedder` 로 주입하고 `config.yaml` 의 `cosine_threshold` 를 맞추는 것, (b) `scripts/build_aliases_from_wikidata.py` 를 실행해 별칭 사전을 보강하는 것. 둘 다 소스 확정 뒤에 하십시오.

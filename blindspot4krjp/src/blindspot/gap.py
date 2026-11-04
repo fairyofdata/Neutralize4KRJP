@@ -31,7 +31,8 @@ import re
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from datetime import timedelta
 
-from .models import Article, BaselineProbe, BlindspotVerdict, Cluster, MatchSignals, SourceProfile
+from .aliases import AliasEntity, AliasIndex
+from .models import Article, BaselineProbe, BlindspotVerdict, Cluster, MatchSignals
 
 # 질의 1건 vs 후보 N건의 코사인 유사도를 돌려주는 함수. 주입해서 쓴다.
 # 실제 구현은 다국어 문장 임베딩 모델, 테스트에서는 가짜 함수.
@@ -55,30 +56,27 @@ def numeric_tokens(text: str) -> set[str]:
     return out
 
 
-def build_alias_index(aliases: Mapping[str, Iterable[str]]) -> dict[str, str]:
-    """{canonical_id: [표면형, ...]} → {표면형(소문자): canonical_id}.
+def build_alias_index(aliases: Mapping[str, Iterable[str]] | AliasIndex | None) -> AliasIndex:
+    """{개체 id: [표면형, ...]} → AliasIndex. 테스트·간단한 호출용 편의 함수.
 
-    표면형은 언어별 표기를 모두 담는다. 예:
-      us_president_trump: ["Trump", "트럼프", "トランプ", "特朗普", "Трамп"]
-    전면 다국어 NER 대신 반복 등장하는 수백 개 개체만 손으로 관리한다.
-    유지보수 항목이지만 투입 대비 효과가 크다.
+    실제 운영에서는 `aliases.load_aliases("aliases.yaml")` 로 만든 AliasIndex 를
+    직접 넘긴다. 매칭 규칙(문자 체계별 처리, 짧은 라틴 표기의 대소문자 구분)은
+    aliases.AliasIndex 가 담당한다 — 단순 부분 문자열 일치는 "US"/"UN"/"WHO" 에서
+    오탐을 내고, 그 오탐이 공백 판정 점수로 바로 들어간다.
     """
-    index: dict[str, str] = {}
-    for canonical, surfaces in aliases.items():
-        for s in surfaces:
-            s = s.strip().lower()
-            if s:
-                index[s] = canonical
-    return index
+    if isinstance(aliases, AliasIndex):
+        return aliases
+    if not aliases:
+        return AliasIndex([])
+    return AliasIndex(
+        AliasEntity(id=canonical, kind="unknown", surfaces={"und": list(surfaces)})
+        for canonical, surfaces in aliases.items()
+    )
 
 
-def entity_tokens(text: str, alias_index: Mapping[str, str]) -> set[str]:
-    """별칭 사전을 거쳐 정규화된 개체 집합. 부분 문자열 일치로 찾는다.
-
-    CJK 는 공백으로 단어가 나뉘지 않으므로 토큰화 대신 부분 문자열 일치가 맞다.
-    """
-    low = text.lower()
-    return {canon for surface, canon in alias_index.items() if surface in low}
+def entity_tokens(text: str, alias_index: AliasIndex | Mapping | None) -> set[str]:
+    """별칭 사전을 거쳐 정규화된 개체 집합."""
+    return build_alias_index(alias_index).extract(text)
 
 
 def jaccard(a: set[str], b: set[str]) -> float:
@@ -114,11 +112,12 @@ def compute_signals(
     candidate: Article,
     embedding_sim: float,
     cluster_time,
-    alias_index: Mapping[str, str],
+    alias_index: AliasIndex | Mapping | None,
 ) -> MatchSignals:
     q_nums, c_nums = numeric_tokens(query_text), numeric_tokens(candidate.match_text())
-    q_ents = entity_tokens(query_text, alias_index)
-    c_ents = entity_tokens(candidate.match_text(), alias_index)
+    idx = build_alias_index(alias_index)
+    q_ents = idx.extract(query_text)
+    c_ents = idx.extract(candidate.match_text())
     delta = abs((candidate.published_at - cluster_time).total_seconds()) / 3600.0
     return MatchSignals(
         embedding_max=embedding_sim,
@@ -157,10 +156,10 @@ def probe_baseline(
     baseline_country: str,
     embed_sim: EmbedSim,
     cfg: Mapping,
-    alias_index: Mapping[str, str] | None = None,
+    alias_index: AliasIndex | Mapping | None = None,
 ) -> BaselineProbe:
     """해외 클러스터 하나에 대해 특정 baseline 국가의 보도 여부를 판정한다."""
-    alias_index = alias_index or {}
+    idx = build_alias_index(alias_index)
     bcfg = cfg["baseline"]
     query = build_cluster_query(cluster, cluster_articles, top_k=bcfg.get("query_top_k", 3))
 
@@ -199,7 +198,7 @@ def probe_baseline(
     best_score = -1.0
     best: tuple[Article, MatchSignals] | None = None
     for art, sim in zip(pool, sims, strict=True):
-        sig = compute_signals(query, art, sim, cluster_time, alias_index)
+        sig = compute_signals(query, art, sim, cluster_time, idx)
         score = blend(sig, bcfg.get("weights", {}))
         if score > best_score:
             best_score, best = score, (art, sig)
@@ -261,10 +260,7 @@ def verdict(
 
 
 def spread_score(blocs: Iterable[str], countries: Iterable[str]) -> float:
-    """P7: 기사 수를 쓰지 않는다.
+    """P8. 구현은 cluster.spread_from 에 있다 — 클러스터 구성과 같은 자리에 둔다."""
+    from .cluster import spread_from
 
-    앵글로권은 영문 매체가 압도적으로 많아서, 기사 수로 랭킹하면 미·영 의제가
-    세계 의제로 둔갑한다. 블록 수를 주 신호로, 국가 수를 보조로 쓴다.
-    """
-    b, c = len(set(blocs)), len(set(countries))
-    return b + 0.1 * c
+    return spread_from(blocs, countries)

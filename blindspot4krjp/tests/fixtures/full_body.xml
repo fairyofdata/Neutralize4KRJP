@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel>
+  <title>Fixture Full Text (synthetic)</title>
+  <item>
+    <title>Long form report on the protests</title>
+    <description>SENTENCE ONE about the protests and the official response. SENTENCE TWO adds context that is not needed. SENTENCE THREE repeats padding to make this entry long enough to exceed the storage cap. SENTENCE FOUR continues the padding at length so the clamp is exercised. SENTENCE FIVE keeps going with yet more words to be certain the total passes six hundred characters in all. SENTENCE SIX adds still more padding text. SENTENCE SEVEN pads further with additional filler wording. SENTENCE EIGHT is the final stretch of padding needed to clear the limit comfortably and then some more. SENTENCE 9 continues the padding with additional filler wording so the storage cap is clearly exceeded. SENTENCE 10 continues the padding with additional filler wording so the storage cap is clearly exceeded. SENTENCE 11 continues the padding with additional filler wording so the storage cap is clearly exceeded. SENTENCE 12 continues the padding with additional filler wording so the storage cap is clearly exceeded. SENTENCE 13 continues the padding with additional filler wording so the storage cap is clearly exceeded. SENTENCE 14 continues the padding with additional filler wording so the storage cap is clearly exceeded. SENTENCE 15 continues the padding with additional filler wording so the storage cap is clearly exceeded.</description>
+    <link>https://fixture.test/long</link>
+    <pubDate>Tue, 03 Nov 2026 11:00:00 GMT</pubDate>
+  </item>
+</channel></rss>

@@ -10,3 +10,4 @@ spikes/out/
 *.egg-info/
 build/
 dist/
+out/

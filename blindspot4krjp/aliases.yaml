@@ -1,0 +1,1025 @@
+# 개체 별칭 사전 — 교차언어 사건 매칭의 보조 신호 (ADR 0002)
+#
+# 왜 필요한가
+#   다국어 임베딩만으로는 제목+리드 길이의 짧은 텍스트에서 사건 동일성이
+#   불안정하다. "같은 개체가 등장하는가"는 사전만 있으면 언어를 넘어 확실하게
+#   판정되고, 숫자 신호와 함께 임베딩의 재현율 부족을 메운다.
+#
+# 매칭 규칙 (src/blindspot/aliases.py 가 강제한다)
+#   - 비라틴 표기(한글·가나·한자·키릴 등): 부분 문자열 일치. 최소 2자.
+#   - 라틴 표기 5자 이상: 단어 경계 + 대소문자 무시.
+#   - 라틴 표기 4자 이하: 단어 경계 + **대소문자 구분**.
+#     "US"/"UN"/"EU" 를 영어 대명사 us, 프랑스어 관사 un, 로마자 eu 와
+#     구분하기 위해 필요하다. 이 규칙이 없으면 오탐이 신호를 망친다.
+#   - 1자 표기는 로드 시 거부된다.
+#   - 두 개체가 같은 표기를 공유하면 로드 시 거부된다 (모호).
+#
+# 유지보수
+#   - kind: person 항목은 선거·정변으로 무효화된다. volatile: true 로 표시하고
+#     as_of 를 적는다. 주기적으로 검토해야 하는 항목이다.
+#   - 일반 주제어(관세, 휴전, 선거, 지진 …)는 **넣지 않는다.** 모든 관세 기사가
+#     모든 관세 기사와 매칭되어 신호가 무의미해진다. 고유명사만 넣는다.
+#   - 간체/번체가 다르면 둘 다 적는다. 대만·홍콩 매체와 중국 매체의 표기가 다르다.
+#   - 이 사전은 초안이다. 운영하면서 놓친 매칭을 보고 늘려 간다.
+#
+# 현재 상태: 라틴·한국어·일본어·중국어 표기는 비교적 촘촘하고,
+#            프랑스어·독일어·러시아어는 드문드문하다. 해당 언어 소스를
+#            채택하면 그 언어 표기를 보강해야 한다.
+
+entities:
+
+  # ─────────────────────────────────────── 국가 · G20 및 주요국
+  - id: usa
+    kind: country
+    surfaces:
+      en: ["United States", "U.S.", "US", "USA", "America"]
+      ko: ["미국"]
+      ja: ["アメリカ", "米国"]
+      zh: ["美国", "美國"]
+      fr: ["États-Unis", "Etats-Unis"]
+      de: ["Vereinigte Staaten"]
+      ru: ["США"]
+  - id: china
+    kind: country
+    surfaces:
+      en: ["China", "Chinese government", "Beijing"]
+      ko: ["중국", "베이징"]
+      ja: ["中国", "北京"]
+      zh: ["中国", "中國", "北京"]
+      fr: ["Chine", "Pékin"]
+      de: ["China", "Peking"]
+      ru: ["Китай"]
+  - id: japan
+    kind: country
+    surfaces:
+      en: ["Japan", "Tokyo"]
+      ko: ["일본", "도쿄"]
+      ja: ["日本", "東京"]
+      zh: ["日本", "东京", "東京"]
+      fr: ["Japon", "Tokyo"]
+      de: ["Japan"]
+      ru: ["Япония"]
+  - id: south_korea
+    kind: country
+    surfaces:
+      en: ["South Korea", "Republic of Korea", "Seoul"]
+      ko: ["한국", "대한민국", "남한", "서울"]
+      ja: ["韓国", "ソウル"]
+      zh: ["韩国", "韓國", "首尔", "首爾"]
+      fr: ["Corée du Sud", "Séoul"]
+      de: ["Südkorea"]
+      ru: ["Южная Корея"]
+  - id: north_korea
+    kind: country
+    surfaces:
+      en: ["North Korea", "DPRK", "Pyongyang"]
+      ko: ["북한", "평양", "조선민주주의인민공화국"]
+      ja: ["北朝鮮", "平壌"]
+      zh: ["朝鲜", "北韓", "平壤"]
+      fr: ["Corée du Nord"]
+      de: ["Nordkorea"]
+      ru: ["Северная Корея"]
+    notes: "zh 는 중국 매체가 朝鲜, 대만·홍콩 매체가 北韓 를 쓴다"
+  - id: taiwan
+    kind: country
+    surfaces:
+      en: ["Taiwan", "Taipei"]
+      ko: ["대만", "타이완", "타이베이"]
+      ja: ["台湾", "台北"]
+      zh: ["台湾", "臺灣", "台北"]
+      fr: ["Taïwan", "Taipei"]
+      de: ["Taiwan"]
+      ru: ["Тайвань"]
+  - id: russia
+    kind: country
+    surfaces:
+      en: ["Russia", "Russian Federation", "Moscow", "Kremlin"]
+      ko: ["러시아", "모스크바", "크렘린"]
+      ja: ["ロシア", "モスクワ", "クレムリン"]
+      zh: ["俄罗斯", "俄羅斯", "莫斯科"]
+      fr: ["Russie", "Moscou", "Kremlin"]
+      de: ["Russland", "Moskau"]
+      ru: ["Россия", "Москва", "Кремль"]
+  - id: ukraine
+    kind: country
+    surfaces:
+      en: ["Ukraine", "Kyiv", "Kiev"]
+      ko: ["우크라이나", "키이우", "키예프"]
+      ja: ["ウクライナ", "キーウ", "キエフ"]
+      zh: ["乌克兰", "烏克蘭", "基辅", "基輔"]
+      fr: ["Ukraine", "Kiev"]
+      de: ["Ukraine", "Kiew"]
+      ru: ["Украина", "Киев"]
+  - id: uk
+    kind: country
+    surfaces:
+      en: ["United Kingdom", "Britain", "British government", "London"]
+      ko: ["영국", "런던"]
+      ja: ["イギリス", "英国", "ロンドン"]
+      zh: ["英国", "英國", "伦敦", "倫敦"]
+      fr: ["Royaume-Uni", "Londres"]
+      de: ["Großbritannien", "London"]
+      ru: ["Великобритания", "Лондон"]
+  - id: france
+    kind: country
+    surfaces:
+      en: ["France", "Paris"]
+      ko: ["프랑스", "파리"]
+      ja: ["フランス", "パリ"]
+      zh: ["法国", "法國", "巴黎"]
+      fr: ["France", "Paris"]
+      de: ["Frankreich"]
+      ru: ["Франция", "Париж"]
+  - id: germany
+    kind: country
+    surfaces:
+      en: ["Germany", "Berlin"]
+      ko: ["독일", "베를린"]
+      ja: ["ドイツ", "ベルリン"]
+      zh: ["德国", "德國", "柏林"]
+      fr: ["Allemagne", "Berlin"]
+      de: ["Deutschland", "Berlin"]
+      ru: ["Германия", "Берлин"]
+  - id: italy
+    kind: country
+    surfaces:
+      en: ["Italy", "Rome"]
+      ko: ["이탈리아", "로마"]
+      ja: ["イタリア", "ローマ"]
+      zh: ["意大利", "罗马", "羅馬"]
+      fr: ["Italie", "Rome"]
+      de: ["Italien"]
+  - id: spain
+    kind: country
+    surfaces:
+      en: ["Spain", "Madrid"]
+      ko: ["스페인", "마드리드"]
+      ja: ["スペイン", "マドリード"]
+      zh: ["西班牙", "马德里"]
+      fr: ["Espagne", "Madrid"]
+      de: ["Spanien"]
+  - id: netherlands
+    kind: country
+    surfaces:
+      en: ["Netherlands", "Dutch government", "Amsterdam", "The Hague"]
+      ko: ["네덜란드", "헤이그"]
+      ja: ["オランダ", "ハーグ"]
+      zh: ["荷兰", "荷蘭", "海牙"]
+      fr: ["Pays-Bas", "La Haye"]
+      de: ["Niederlande"]
+  - id: poland
+    kind: country
+    surfaces:
+      en: ["Poland", "Warsaw"]
+      ko: ["폴란드", "바르샤바"]
+      ja: ["ポーランド", "ワルシャワ"]
+      zh: ["波兰", "波蘭", "华沙"]
+      fr: ["Pologne", "Varsovie"]
+      de: ["Polen", "Warschau"]
+      ru: ["Польша"]
+  - id: india
+    kind: country
+    surfaces:
+      en: ["India", "New Delhi"]
+      ko: ["인도", "뉴델리"]
+      ja: ["インド", "ニューデリー"]
+      zh: ["印度", "新德里"]
+      fr: ["Inde", "New Delhi"]
+      de: ["Indien"]
+      ru: ["Индия"]
+  - id: pakistan
+    kind: country
+    surfaces:
+      en: ["Pakistan", "Islamabad"]
+      ko: ["파키스탄", "이슬라마바드"]
+      ja: ["パキスタン"]
+      zh: ["巴基斯坦"]
+      fr: ["Pakistan"]
+  - id: bangladesh
+    kind: country
+    surfaces:
+      en: ["Bangladesh", "Dhaka"]
+      ko: ["방글라데시", "다카"]
+      ja: ["バングラデシュ"]
+      zh: ["孟加拉国", "孟加拉"]
+      fr: ["Bangladesh"]
+  - id: indonesia
+    kind: country
+    surfaces:
+      en: ["Indonesia", "Jakarta"]
+      ko: ["인도네시아", "자카르타"]
+      ja: ["インドネシア", "ジャカルタ"]
+      zh: ["印度尼西亚", "印尼", "雅加达"]
+      fr: ["Indonésie"]
+  - id: vietnam
+    kind: country
+    surfaces:
+      en: ["Vietnam", "Hanoi"]
+      ko: ["베트남", "하노이"]
+      ja: ["ベトナム", "ハノイ"]
+      zh: ["越南", "河内"]
+      fr: ["Vietnam"]
+  - id: thailand
+    kind: country
+    surfaces:
+      en: ["Thailand", "Bangkok"]
+      ko: ["태국", "방콕"]
+      ja: ["タイ", "バンコク"]
+      zh: ["泰国", "泰國", "曼谷"]
+      fr: ["Thaïlande"]
+  - id: philippines
+    kind: country
+    surfaces:
+      en: ["Philippines", "Manila"]
+      ko: ["필리핀", "마닐라"]
+      ja: ["フィリピン", "マニラ"]
+      zh: ["菲律宾", "菲律賓", "马尼拉"]
+      fr: ["Philippines"]
+  - id: malaysia
+    kind: country
+    surfaces:
+      en: ["Malaysia", "Kuala Lumpur"]
+      ko: ["말레이시아", "쿠알라룸푸르"]
+      ja: ["マレーシア"]
+      zh: ["马来西亚", "馬來西亞"]
+      fr: ["Malaisie"]
+  - id: singapore
+    kind: country
+    surfaces:
+      en: ["Singapore"]
+      ko: ["싱가포르"]
+      ja: ["シンガポール"]
+      zh: ["新加坡"]
+      fr: ["Singapour"]
+  - id: myanmar
+    kind: country
+    surfaces:
+      en: ["Myanmar", "Burma", "Naypyidaw"]
+      ko: ["미얀마"]
+      ja: ["ミャンマー"]
+      zh: ["缅甸", "緬甸"]
+      fr: ["Birmanie", "Myanmar"]
+  - id: australia
+    kind: country
+    surfaces:
+      en: ["Australia", "Canberra"]
+      ko: ["호주", "오스트레일리아", "캔버라"]
+      ja: ["オーストラリア", "豪州"]
+      zh: ["澳大利亚", "澳洲"]
+      fr: ["Australie"]
+      de: ["Australien"]
+  - id: new_zealand
+    kind: country
+    surfaces:
+      en: ["New Zealand", "Wellington"]
+      ko: ["뉴질랜드"]
+      ja: ["ニュージーランド"]
+      zh: ["新西兰", "紐西蘭"]
+      fr: ["Nouvelle-Zélande"]
+  - id: canada
+    kind: country
+    surfaces:
+      en: ["Canada", "Ottawa"]
+      ko: ["캐나다", "오타와"]
+      ja: ["カナダ"]
+      zh: ["加拿大"]
+      fr: ["Canada"]
+      de: ["Kanada"]
+
+  # ─────────────────────────────────────── 국가 · 중동 · 아프리카 · 중남미
+  # (분쟁 지역과 '보도 공백'이 생기기 쉬운 지역을 우선 수록)
+  - id: israel
+    kind: country
+    surfaces:
+      en: ["Israel", "Israeli government", "Jerusalem", "Tel Aviv"]
+      ko: ["이스라엘", "예루살렘", "텔아비브"]
+      ja: ["イスラエル", "エルサレム"]
+      zh: ["以色列", "耶路撒冷"]
+      fr: ["Israël", "Jérusalem"]
+      de: ["Israel"]
+      ru: ["Израиль"]
+  - id: palestine
+    kind: country
+    surfaces:
+      en: ["Palestine", "Palestinian Authority"]
+      ko: ["팔레스타인"]
+      ja: ["パレスチナ"]
+      zh: ["巴勒斯坦"]
+      fr: ["Palestine"]
+      de: ["Palästina"]
+  - id: iran
+    kind: country
+    surfaces:
+      en: ["Iran", "Tehran"]
+      ko: ["이란", "테헤란"]
+      ja: ["イラン", "テヘラン"]
+      zh: ["伊朗", "德黑兰"]
+      fr: ["Iran", "Téhéran"]
+      ru: ["Иран"]
+  - id: iraq
+    kind: country
+    surfaces:
+      en: ["Iraq", "Baghdad"]
+      ko: ["이라크", "바그다드"]
+      ja: ["イラク", "バグダッド"]
+      zh: ["伊拉克", "巴格达"]
+      fr: ["Irak"]
+  - id: saudi_arabia
+    kind: country
+    surfaces:
+      en: ["Saudi Arabia", "Riyadh"]
+      ko: ["사우디아라비아", "사우디", "리야드"]
+      ja: ["サウジアラビア"]
+      zh: ["沙特阿拉伯", "沙烏地阿拉伯", "沙特"]
+      fr: ["Arabie saoudite"]
+  - id: uae
+    kind: country
+    surfaces:
+      en: ["United Arab Emirates", "UAE", "Abu Dhabi", "Dubai"]
+      ko: ["아랍에미리트", "두바이"]
+      ja: ["アラブ首長国連邦", "ドバイ"]
+      zh: ["阿联酋", "阿拉伯联合酋长国", "迪拜"]
+      fr: ["Émirats arabes unis"]
+  - id: qatar
+    kind: country
+    surfaces:
+      en: ["Qatar", "Doha"]
+      ko: ["카타르", "도하"]
+      ja: ["カタール"]
+      zh: ["卡塔尔", "卡達"]
+      fr: ["Qatar"]
+  - id: turkey
+    kind: country
+    surfaces:
+      en: ["Turkey", "Türkiye", "Ankara", "Istanbul"]
+      ko: ["튀르키예", "터키", "앙카라", "이스탄불"]
+      ja: ["トルコ", "アンカラ"]
+      zh: ["土耳其", "安卡拉"]
+      fr: ["Turquie", "Ankara"]
+      de: ["Türkei"]
+      ru: ["Турция"]
+  - id: syria
+    kind: country
+    surfaces:
+      en: ["Syria", "Damascus"]
+      ko: ["시리아", "다마스쿠스"]
+      ja: ["シリア", "ダマスカス"]
+      zh: ["叙利亚", "敘利亞", "大马士革"]
+      fr: ["Syrie", "Damas"]
+      ru: ["Сирия"]
+  - id: lebanon
+    kind: country
+    surfaces:
+      en: ["Lebanon", "Beirut"]
+      ko: ["레바논", "베이루트"]
+      ja: ["レバノン", "ベイルート"]
+      zh: ["黎巴嫩", "贝鲁特"]
+      fr: ["Liban", "Beyrouth"]
+  - id: yemen
+    kind: country
+    surfaces:
+      en: ["Yemen", "Sanaa"]
+      ko: ["예멘"]
+      ja: ["イエメン"]
+      zh: ["也门", "也門"]
+      fr: ["Yémen"]
+  - id: afghanistan
+    kind: country
+    surfaces:
+      en: ["Afghanistan", "Kabul"]
+      ko: ["아프가니스탄", "카불"]
+      ja: ["アフガニスタン", "カブール"]
+      zh: ["阿富汗", "喀布尔"]
+      fr: ["Afghanistan"]
+  - id: egypt
+    kind: country
+    surfaces:
+      en: ["Egypt", "Cairo"]
+      ko: ["이집트", "카이로"]
+      ja: ["エジプト", "カイロ"]
+      zh: ["埃及", "开罗"]
+      fr: ["Égypte", "Le Caire"]
+  - id: sudan
+    kind: country
+    surfaces:
+      en: ["Sudan", "Khartoum"]
+      ko: ["수단", "하르툼"]
+      ja: ["スーダン"]
+      zh: ["苏丹", "蘇丹"]
+      fr: ["Soudan"]
+  - id: ethiopia
+    kind: country
+    surfaces:
+      en: ["Ethiopia", "Addis Ababa"]
+      ko: ["에티오피아"]
+      ja: ["エチオピア"]
+      zh: ["埃塞俄比亚", "衣索比亞"]
+      fr: ["Éthiopie"]
+  - id: nigeria
+    kind: country
+    surfaces:
+      en: ["Nigeria", "Abuja", "Lagos"]
+      ko: ["나이지리아", "라고스"]
+      ja: ["ナイジェリア"]
+      zh: ["尼日利亚", "奈及利亞"]
+      fr: ["Nigeria", "Nigéria"]
+  - id: kenya
+    kind: country
+    surfaces:
+      en: ["Kenya", "Nairobi"]
+      ko: ["케냐", "나이로비"]
+      ja: ["ケニア"]
+      zh: ["肯尼亚", "肯亞"]
+      fr: ["Kenya"]
+  - id: south_africa
+    kind: country
+    surfaces:
+      en: ["South Africa", "Pretoria", "Johannesburg"]
+      ko: ["남아프리카공화국", "남아공", "요하네스버그"]
+      ja: ["南アフリカ"]
+      zh: ["南非", "约翰内斯堡"]
+      fr: ["Afrique du Sud"]
+      de: ["Südafrika"]
+  - id: dr_congo
+    kind: country
+    surfaces:
+      en: ["Democratic Republic of Congo", "DR Congo", "Kinshasa"]
+      ko: ["콩고민주공화국", "민주콩고"]
+      ja: ["コンゴ民主共和国"]
+      zh: ["刚果民主共和国", "刚果金"]
+      fr: ["République démocratique du Congo"]
+  - id: mali
+    kind: country
+    surfaces:
+      en: ["Mali", "Bamako"]
+      ko: ["말리"]
+      ja: ["マリ"]
+      zh: ["马里", "馬利"]
+      fr: ["Mali", "Bamako"]
+  - id: morocco
+    kind: country
+    surfaces:
+      en: ["Morocco", "Rabat"]
+      ko: ["모로코"]
+      ja: ["モロッコ"]
+      zh: ["摩洛哥"]
+      fr: ["Maroc"]
+  - id: algeria
+    kind: country
+    surfaces:
+      en: ["Algeria", "Algiers"]
+      ko: ["알제리"]
+      ja: ["アルジェリア"]
+      zh: ["阿尔及利亚"]
+      fr: ["Algérie", "Alger"]
+  - id: libya
+    kind: country
+    surfaces:
+      en: ["Libya", "Tripoli"]
+      ko: ["리비아"]
+      ja: ["リビア"]
+      zh: ["利比亚", "利比亞"]
+      fr: ["Libye"]
+  - id: brazil
+    kind: country
+    surfaces:
+      en: ["Brazil", "Brasilia"]
+      ko: ["브라질", "브라질리아"]
+      ja: ["ブラジル"]
+      zh: ["巴西"]
+      fr: ["Brésil"]
+      de: ["Brasilien"]
+      ru: ["Бразилия"]
+  - id: mexico
+    kind: country
+    surfaces:
+      en: ["Mexico", "Mexico City"]
+      ko: ["멕시코"]
+      ja: ["メキシコ"]
+      zh: ["墨西哥"]
+      fr: ["Mexique"]
+  - id: argentina
+    kind: country
+    surfaces:
+      en: ["Argentina", "Buenos Aires"]
+      ko: ["아르헨티나", "부에노스아이레스"]
+      ja: ["アルゼンチン"]
+      zh: ["阿根廷"]
+      fr: ["Argentine"]
+  - id: chile
+    kind: country
+    surfaces:
+      en: ["Chile", "Santiago"]
+      ko: ["칠레"]
+      ja: ["チリ"]
+      zh: ["智利"]
+      fr: ["Chili"]
+  - id: colombia
+    kind: country
+    surfaces:
+      en: ["Colombia", "Bogota"]
+      ko: ["콜롬비아"]
+      ja: ["コロンビア"]
+      zh: ["哥伦比亚"]
+      fr: ["Colombie"]
+  - id: venezuela
+    kind: country
+    surfaces:
+      en: ["Venezuela", "Caracas"]
+      ko: ["베네수엘라", "카라카스"]
+      ja: ["ベネズエラ"]
+      zh: ["委内瑞拉", "委內瑞拉"]
+      fr: ["Venezuela"]
+  - id: peru
+    kind: country
+    surfaces:
+      en: ["Peru", "Lima"]
+      ko: ["페루"]
+      ja: ["ペルー"]
+      zh: ["秘鲁", "秘魯"]
+      fr: ["Pérou"]
+  - id: cuba
+    kind: country
+    surfaces:
+      en: ["Cuba", "Havana"]
+      ko: ["쿠바", "아바나"]
+      ja: ["キューバ"]
+      zh: ["古巴"]
+      fr: ["Cuba"]
+  - id: haiti
+    kind: country
+    surfaces:
+      en: ["Haiti", "Port-au-Prince"]
+      ko: ["아이티"]
+      ja: ["ハイチ"]
+      zh: ["海地"]
+      fr: ["Haïti"]
+  - id: belarus
+    kind: country
+    surfaces:
+      en: ["Belarus", "Minsk"]
+      ko: ["벨라루스", "민스크"]
+      ja: ["ベラルーシ"]
+      zh: ["白俄罗斯", "白俄羅斯"]
+      fr: ["Bélarus", "Biélorussie"]
+      ru: ["Беларусь"]
+  - id: kazakhstan
+    kind: country
+    surfaces:
+      en: ["Kazakhstan", "Astana"]
+      ko: ["카자흐스탄"]
+      ja: ["カザフスタン"]
+      zh: ["哈萨克斯坦"]
+      fr: ["Kazakhstan"]
+      ru: ["Казахстан"]
+  - id: hungary
+    kind: country
+    surfaces:
+      en: ["Hungary", "Budapest"]
+      ko: ["헝가리", "부다페스트"]
+      ja: ["ハンガリー"]
+      zh: ["匈牙利"]
+      fr: ["Hongrie"]
+      de: ["Ungarn"]
+
+  # ─────────────────────────────────────── 국제기구 · 비국가 행위자
+  - id: united_nations
+    kind: org
+    surfaces:
+      en: ["United Nations", "U.N.", "UN"]
+      ko: ["유엔", "국제연합"]
+      ja: ["国連", "国際連合"]
+      zh: ["联合国", "聯合國"]
+      fr: ["Nations unies", "ONU"]
+      de: ["Vereinte Nationen"]
+      ru: ["ООН"]
+    notes: "en 'UN' 은 4자 이하라 대소문자 구분 매칭된다. 프랑스어 관사 'un' 과 섞이지 않는다."
+  - id: un_security_council
+    kind: org
+    surfaces:
+      en: ["Security Council", "UNSC"]
+      ko: ["안전보장이사회", "안보리"]
+      ja: ["安全保障理事会", "安保理"]
+      zh: ["安全理事会", "安理会"]
+      fr: ["Conseil de sécurité"]
+  - id: nato
+    kind: org
+    surfaces:
+      en: ["NATO", "North Atlantic Treaty Organization"]
+      ko: ["나토", "북대서양조약기구"]
+      ja: ["NATO", "北大西洋条約機構"]
+      zh: ["北约", "北約"]
+      fr: ["OTAN"]
+      ru: ["НАТО"]
+  - id: european_union
+    kind: org
+    surfaces:
+      en: ["European Union", "EU", "European Commission", "Brussels"]
+      ko: ["유럽연합", "EU", "유럽위원회", "브뤼셀"]
+      ja: ["欧州連合", "EU", "欧州委員会"]
+      zh: ["欧盟", "歐盟", "欧洲联盟"]
+      fr: ["Union européenne", "Commission européenne"]
+      de: ["Europäische Union"]
+  - id: imf
+    kind: org
+    surfaces:
+      en: ["International Monetary Fund", "IMF"]
+      ko: ["국제통화기금", "IMF"]
+      ja: ["国際通貨基金", "IMF"]
+      zh: ["国际货币基金组织", "国际货币基金"]
+      fr: ["Fonds monétaire international"]
+  - id: world_bank
+    kind: org
+    surfaces:
+      en: ["World Bank"]
+      ko: ["세계은행"]
+      ja: ["世界銀行"]
+      zh: ["世界银行", "世界銀行"]
+      fr: ["Banque mondiale"]
+  - id: who
+    kind: org
+    surfaces:
+      en: ["World Health Organization", "WHO"]
+      ko: ["세계보건기구"]
+      ja: ["世界保健機関", "WHO"]
+      zh: ["世界卫生组织", "世卫组织"]
+      fr: ["Organisation mondiale de la santé"]
+    notes: "en 'WHO' 는 대소문자 구분 매칭되어 의문사 who 와 섞이지 않는다"
+  - id: wto
+    kind: org
+    surfaces:
+      en: ["World Trade Organization", "WTO"]
+      ko: ["세계무역기구", "WTO"]
+      ja: ["世界貿易機関", "WTO"]
+      zh: ["世界贸易组织", "世贸组织"]
+      fr: ["Organisation mondiale du commerce"]
+  - id: opec
+    kind: org
+    surfaces:
+      en: ["OPEC"]
+      ko: ["오펙", "석유수출국기구"]
+      ja: ["OPEC", "石油輸出国機構"]
+      zh: ["欧佩克", "石油输出国组织"]
+      fr: ["OPEP"]
+  - id: asean
+    kind: org
+    surfaces:
+      en: ["ASEAN", "Association of Southeast Asian Nations"]
+      ko: ["아세안", "동남아시아국가연합"]
+      ja: ["ASEAN", "東南アジア諸国連合"]
+      zh: ["东盟", "東協"]
+      fr: ["ASEAN", "ANASE"]
+  - id: african_union
+    kind: org
+    surfaces:
+      en: ["African Union"]
+      ko: ["아프리카연합"]
+      ja: ["アフリカ連合"]
+      zh: ["非洲联盟", "非盟"]
+      fr: ["Union africaine"]
+  - id: brics
+    kind: org
+    surfaces:
+      en: ["BRICS"]
+      ko: ["브릭스"]
+      ja: ["BRICS"]
+      zh: ["金砖国家", "金磚國家"]
+      fr: ["BRICS"]
+  - id: g7
+    kind: org
+    surfaces:
+      en: ["G7", "Group of Seven"]
+      ko: ["G7", "주요 7개국"]
+      ja: ["G7", "主要7カ国"]
+      zh: ["七国集团", "七大工業國"]
+      fr: ["G7"]
+  - id: g20
+    kind: org
+    surfaces:
+      en: ["G20", "Group of Twenty"]
+      ko: ["G20", "주요 20개국"]
+      ja: ["G20"]
+      zh: ["二十国集团", "G20"]
+      fr: ["G20"]
+  - id: icc
+    kind: org
+    surfaces:
+      en: ["International Criminal Court", "ICC"]
+      ko: ["국제형사재판소"]
+      ja: ["国際刑事裁判所"]
+      zh: ["国际刑事法院"]
+      fr: ["Cour pénale internationale"]
+  - id: icj
+    kind: org
+    surfaces:
+      en: ["International Court of Justice", "ICJ"]
+      ko: ["국제사법재판소"]
+      ja: ["国際司法裁判所"]
+      zh: ["国际法院"]
+      fr: ["Cour internationale de justice"]
+  - id: iaea
+    kind: org
+    surfaces:
+      en: ["IAEA", "International Atomic Energy Agency"]
+      ko: ["국제원자력기구"]
+      ja: ["IAEA", "国際原子力機関"]
+      zh: ["国际原子能机构"]
+      fr: ["AIEA"]
+  - id: federal_reserve
+    kind: org
+    surfaces:
+      en: ["Federal Reserve", "the Fed", "FOMC"]
+      ko: ["연방준비제도", "연준"]
+      ja: ["連邦準備制度", "FRB"]
+      zh: ["美联储", "美國聯準會"]
+      fr: ["Réserve fédérale"]
+  - id: ecb
+    kind: org
+    surfaces:
+      en: ["European Central Bank", "ECB"]
+      ko: ["유럽중앙은행"]
+      ja: ["欧州中央銀行", "ECB"]
+      zh: ["欧洲央行"]
+      fr: ["Banque centrale européenne"]
+  - id: hamas
+    kind: org
+    surfaces:
+      en: ["Hamas"]
+      ko: ["하마스"]
+      ja: ["ハマス"]
+      zh: ["哈马斯", "哈瑪斯"]
+      fr: ["Hamas"]
+      ru: ["ХАМАС"]
+  - id: hezbollah
+    kind: org
+    surfaces:
+      en: ["Hezbollah", "Hizbollah"]
+      ko: ["헤즈볼라"]
+      ja: ["ヒズボラ"]
+      zh: ["真主党", "真主黨"]
+      fr: ["Hezbollah"]
+  - id: houthi
+    kind: org
+    surfaces:
+      en: ["Houthi", "Houthis"]
+      ko: ["후티"]
+      ja: ["フーシ"]
+      zh: ["胡塞", "青年運動"]
+      fr: ["Houthis"]
+  - id: taliban
+    kind: org
+    surfaces:
+      en: ["Taliban"]
+      ko: ["탈레반"]
+      ja: ["タリバン"]
+      zh: ["塔利班"]
+      fr: ["taliban", "talibans"]
+
+  # ─────────────────────────────────────── 지명 · 분쟁 지역
+  # 고유명사만 넣는다. '휴전', '관세' 같은 일반 주제어는 넣지 않는다 —
+  # 모든 관세 기사가 서로 매칭되어 신호가 무의미해진다.
+  - id: taiwan_strait
+    kind: place
+    surfaces:
+      en: ["Taiwan Strait"]
+      ko: ["대만해협", "타이완해협"]
+      ja: ["台湾海峡"]
+      zh: ["台湾海峡", "臺灣海峽"]
+      fr: ["détroit de Taïwan"]
+  - id: south_china_sea
+    kind: place
+    surfaces:
+      en: ["South China Sea"]
+      ko: ["남중국해"]
+      ja: ["南シナ海"]
+      zh: ["南海", "南中国海"]
+      fr: ["mer de Chine méridionale"]
+  - id: east_china_sea
+    kind: place
+    surfaces:
+      en: ["East China Sea"]
+      ko: ["동중국해"]
+      ja: ["東シナ海"]
+      zh: ["东海", "東海"]
+      fr: ["mer de Chine orientale"]
+  - id: gaza
+    kind: place
+    surfaces:
+      en: ["Gaza", "Gaza Strip"]
+      ko: ["가자", "가자지구"]
+      ja: ["ガザ"]
+      zh: ["加沙", "加薩"]
+      fr: ["Gaza"]
+      ru: ["Газа"]
+  - id: west_bank
+    kind: place
+    surfaces:
+      en: ["West Bank"]
+      ko: ["요르단강 서안", "서안지구"]
+      ja: ["ヨルダン川西岸"]
+      zh: ["约旦河西岸", "約旦河西岸"]
+      fr: ["Cisjordanie"]
+  - id: red_sea
+    kind: place
+    surfaces:
+      en: ["Red Sea"]
+      ko: ["홍해"]
+      ja: ["紅海"]
+      zh: ["红海", "紅海"]
+      fr: ["mer Rouge"]
+  - id: crimea
+    kind: place
+    surfaces:
+      en: ["Crimea"]
+      ko: ["크림반도", "크림"]
+      ja: ["クリミア"]
+      zh: ["克里米亚", "克里米亞"]
+      fr: ["Crimée"]
+      ru: ["Крым"]
+  - id: donbas
+    kind: place
+    surfaces:
+      en: ["Donbas", "Donbass"]
+      ko: ["돈바스"]
+      ja: ["ドンバス"]
+      zh: ["顿巴斯", "頓巴斯"]
+      fr: ["Donbass"]
+      ru: ["Донбасс"]
+  - id: kashmir
+    kind: place
+    surfaces:
+      en: ["Kashmir"]
+      ko: ["카슈미르"]
+      ja: ["カシミール"]
+      zh: ["克什米尔", "喀什米爾"]
+      fr: ["Cachemire"]
+  - id: sahel
+    kind: place
+    surfaces:
+      en: ["Sahel"]
+      ko: ["사헬"]
+      ja: ["サヘル"]
+      zh: ["萨赫勒", "薩赫勒"]
+      fr: ["Sahel"]
+  - id: strait_of_hormuz
+    kind: place
+    surfaces:
+      en: ["Strait of Hormuz"]
+      ko: ["호르무즈 해협", "호르무즈해협"]
+      ja: ["ホルムズ海峡"]
+      zh: ["霍尔木兹海峡", "荷姆茲海峽"]
+      fr: ["détroit d'Ormuz"]
+  - id: panama_canal
+    kind: place
+    surfaces:
+      en: ["Panama Canal"]
+      ko: ["파나마 운하", "파나마운하"]
+      ja: ["パナマ運河"]
+      zh: ["巴拿马运河", "巴拿馬運河"]
+      fr: ["canal de Panama"]
+  - id: suez_canal
+    kind: place
+    surfaces:
+      en: ["Suez Canal"]
+      ko: ["수에즈 운하", "수에즈운하"]
+      ja: ["スエズ運河"]
+      zh: ["苏伊士运河", "蘇伊士運河"]
+      fr: ["canal de Suez"]
+  - id: mekong
+    kind: place
+    surfaces:
+      en: ["Mekong"]
+      ko: ["메콩"]
+      ja: ["メコン"]
+      zh: ["湄公河"]
+      fr: ["Mékong"]
+
+  # ─────────────────────────────────────── 인물
+  # ⚠ volatile. 선거·정변으로 무효화된다. 아래는 2026-05 기준 초안이며
+  #   주기적 검토가 필요하다. 재임 기간이 긴 인물만 수록했고, 최근 취임·
+  #   교체 가능성이 있는 인물은 의도적으로 생략했다 — 틀린 항목을 넣는 것이
+  #   빈 항목보다 나쁘다. 운영자가 Wikidata 생성본으로 보강하는 것이 정답이다.
+  - id: xi_jinping
+    kind: person
+    volatile: true
+    as_of: "2026-05"
+    surfaces:
+      en: ["Xi Jinping"]
+      ko: ["시진핑"]
+      ja: ["習近平"]
+      zh: ["习近平", "習近平"]
+      fr: ["Xi Jinping"]
+      ru: ["Си Цзиньпин"]
+  - id: vladimir_putin
+    kind: person
+    volatile: true
+    as_of: "2026-05"
+    surfaces:
+      en: ["Putin"]
+      ko: ["푸틴"]
+      ja: ["プーチン"]
+      zh: ["普京", "普丁"]
+      fr: ["Poutine"]
+      ru: ["Путин"]
+  - id: kim_jong_un
+    kind: person
+    volatile: true
+    as_of: "2026-05"
+    surfaces:
+      en: ["Kim Jong Un", "Kim Jong-un"]
+      ko: ["김정은"]
+      ja: ["金正恩"]
+      zh: ["金正恩"]
+      fr: ["Kim Jong-un"]
+  - id: narendra_modi
+    kind: person
+    volatile: true
+    as_of: "2026-05"
+    surfaces:
+      en: ["Modi"]
+      ko: ["모디"]
+      ja: ["モディ"]
+      zh: ["莫迪"]
+      fr: ["Modi"]
+  - id: benjamin_netanyahu
+    kind: person
+    volatile: true
+    as_of: "2026-05"
+    surfaces:
+      en: ["Netanyahu"]
+      ko: ["네타냐후"]
+      ja: ["ネタニヤフ"]
+      zh: ["内塔尼亚胡", "納坦雅胡"]
+      fr: ["Netanyahou"]
+  - id: volodymyr_zelensky
+    kind: person
+    volatile: true
+    as_of: "2026-05"
+    surfaces:
+      en: ["Zelensky", "Zelenskyy", "Zelenskiy"]
+      ko: ["젤렌스키"]
+      ja: ["ゼレンスキー"]
+      zh: ["泽连斯基", "澤倫斯基"]
+      fr: ["Zelensky"]
+      ru: ["Зеленский"]
+  - id: donald_trump
+    kind: person
+    volatile: true
+    as_of: "2026-05"
+    surfaces:
+      en: ["Trump"]
+      ko: ["트럼프"]
+      ja: ["トランプ"]
+      zh: ["特朗普", "川普"]
+      fr: ["Trump"]
+      ru: ["Трамп"]
+  - id: emmanuel_macron
+    kind: person
+    volatile: true
+    as_of: "2026-05"
+    surfaces:
+      en: ["Macron"]
+      ko: ["마크롱"]
+      ja: ["マクロン"]
+      zh: ["马克龙", "馬克宏"]
+      fr: ["Macron"]
+  - id: recep_tayyip_erdogan
+    kind: person
+    volatile: true
+    as_of: "2026-05"
+    surfaces:
+      en: ["Erdogan", "Erdoğan"]
+      ko: ["에르도안"]
+      ja: ["エルドアン"]
+      zh: ["埃尔多安", "艾爾多安"]
+      fr: ["Erdogan"]
+  - id: ali_khamenei
+    kind: person
+    volatile: true
+    as_of: "2026-05"
+    surfaces:
+      en: ["Khamenei"]
+      ko: ["하메네이"]
+      ja: ["ハメネイ"]
+      zh: ["哈梅内伊"]
+      fr: ["Khamenei"]
+  - id: viktor_orban
+    kind: person
+    volatile: true
+    as_of: "2026-05"
+    surfaces:
+      en: ["Orban", "Orbán"]
+      ko: ["오르반"]
+      ja: ["オルバン"]
+      zh: ["欧尔班", "奧班"]
+      fr: ["Orban"]
+  - id: nicolas_maduro
+    kind: person
+    volatile: true
+    as_of: "2026-05"
+    surfaces:
+      en: ["Maduro"]
+      ko: ["마두로"]
+      ja: ["マドゥロ"]
+      zh: ["马杜罗", "馬杜羅"]
+      fr: ["Maduro"]
