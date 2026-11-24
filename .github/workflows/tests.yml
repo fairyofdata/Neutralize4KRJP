@@ -1,5 +1,6 @@
 # Run the unit tests on every push. No deployment.
 # The tests mock the OpenAI client, so no API key is needed.
+# Steps come from the shared reusable workflows in fairyofdata/Concordia (docs/DECISIONS.md D1).
 name: tests
 
 on:
@@ -12,12 +13,11 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-      - run: python -m pip install -r requirements.txt
-      - run: python -m pytest -q
+    uses: fairyofdata/Concordia/.github/workflows/python-tests.yml@v1
+    with:
+      python-versions: '["3.12"]'
+      install: python -m pip install -r requirements.txt
+      test: python -m pytest -q
+
+  hygiene:
+    uses: fairyofdata/Concordia/.github/workflows/hygiene.yml@v1

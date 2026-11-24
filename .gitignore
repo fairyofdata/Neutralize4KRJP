@@ -51,3 +51,12 @@ htmlcov/
 # Local dynamic data / outputs (keep sample data in data/)
 output/
 temp/
+
+# 로컬 하네스 파일 — 공개 저장소에 올리지 않는다
+/state.md
+CLAUDE.local.md
+.claude/
+
+# 개인 산출물 — 레포에 넣지 않는다(불가피하면 여기에, 로컬만)
+_private/
+*.private.*
