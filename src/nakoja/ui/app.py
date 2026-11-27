@@ -1,4 +1,4 @@
-"""Modern Streamlit UI for LLM-NAKOJA."""
+"""Modern Streamlit UI for Neutralize4KRJP."""
 
 import os
 from pathlib import Path
@@ -64,7 +64,7 @@ def load_offline_sample_data():
 
 def run_app():
     st.set_page_config(
-        page_title="LLM-NAKOJA | 한일관계 중립기사 생성기",
+        page_title="Neutralize4KRJP | 한일관계 중립기사 생성기",
         page_icon="⚖️",
         layout="wide",
         initial_sidebar_state="expanded",
@@ -74,7 +74,7 @@ def run_app():
 
     # --- Sidebar Configuration ---
     with st.sidebar:
-        st.image("https://img.shields.io/badge/LLM--NAKOJA-v0.2.0-blue?style=for-the-badge", use_container_width=True)
+        st.image("https://img.shields.io/badge/Neutralize4KRJP-v0.2.0-blue?style=for-the-badge", use_container_width=True)
         st.title("⚙️ 설정 (Settings)")
 
         # API Key input
@@ -113,7 +113,7 @@ def run_app():
     st.markdown(
         """
         <div style="padding: 1.5rem 1rem; border-radius: 10px; background: linear-gradient(135deg, #1e293b, #0f172a); color: white; margin-bottom: 2rem;">
-            <h1 style="margin: 0; font-size: 2.2rem; font-weight: 700;">🌏 LLM-NAKOJA : 한일관계 중립기사 자동생성기</h1>
+            <h1 style="margin: 0; font-size: 2.2rem; font-weight: 700;">🌏 Neutralize4KRJP : 한일관계 중립기사 자동생성기</h1>
             <p style="margin: 0.5rem 0 0 0; color: #94a3b8; font-size: 1.05rem;">
                 양국 언론(중앙일보 & 요미우리)의 보도를 수집·분석하고, <b>중간 언어(English)</b>를 매개로 L1 언어적 편향을 제거한 균형 잡힌 중립 기사를 합성합니다.
             </p>

@@ -1,1 +1,1 @@
-"""Unit test suite for LLM-NAKOJA."""
+"""Unit test suite for Neutralize4KRJP."""

@@ -1,4 +1,4 @@
-"""Main entrypoint for LLM-NAKOJA Streamlit Application."""
+"""Main entrypoint for the Neutralize4KRJP Streamlit application."""
 
 import sys
 from pathlib import Path

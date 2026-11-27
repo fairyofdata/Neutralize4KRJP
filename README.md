@@ -1,6 +1,6 @@
-<!-- Source: README_KR.md (Korean is the source; English and Japanese are translations) · synced 2026-10-26 -->
+<!-- Source: README_KR.md (Korean is the source; English and Japanese are translations) · synced 2026-11-27 -->
 
-# Neutralize4KRJP — neutral articles from Korean and Japanese coverage (LLM-NAKOJA)
+# Neutralize4KRJP — neutral articles from Korean and Japanese coverage
 
 [English](README.md) · [한국어](README_KR.md) · [日本語](README_JP.md)
 
@@ -14,9 +14,9 @@
 
 A pipeline that pairs JoongAng Ilbo and Yomiuri Shimbun articles on the same issue and has an LLM write a **neutral article in Korean and Japanese** that separates shared facts from each side's emphasis.
 
-*Individual project (Oct–Nov 2024), building on the SW021 "ChatGPT for Business" program at Sungshin Women's University. The app is called LLM-NAKOJA; the repository was formerly `LLM_NAKOJA`.*
+*Individual project (Oct–Nov 2024), building on the SW021 "ChatGPT for Business" program at Sungshin Women's University. The repository was formerly `LLM_NAKOJA` (app name LLM-NAKOJA).*
 
-![NAKOJA dashboard preview](./NAKOJA_Preview.png)
+![Neutralize4KRJP dashboard preview](./NAKOJA_Preview.png)
 
 ## Motivation
 

@@ -1,4 +1,4 @@
-"""Configuration and settings for LLM-NAKOJA."""
+"""Configuration and settings for Neutralize4KRJP."""
 
 import os
 from pathlib import Path

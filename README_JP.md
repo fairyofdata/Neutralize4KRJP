@@ -1,6 +1,6 @@
-<!-- 原本: README_KR.md（韓国語版が原本、英語・日本語は翻訳） · 同期: 2026-10-26 -->
+<!-- 原本: README_KR.md（韓国語版が原本、英語・日本語は翻訳） · 同期: 2026-11-27 -->
 
-# Neutralize4KRJP — 日韓両国の報道から書く中立記事 (LLM-NAKOJA)
+# Neutralize4KRJP — 日韓両国の報道から書く中立記事
 
 [English](README.md) · [한국어](README_KR.md) · [日本語](README_JP.md)
 
@@ -14,9 +14,9 @@
 
 中央日報と読売新聞が同じ事案を扱った記事を組み合わせ、共通の事実と両国の強調点の違いを分けて書いた**日本語・韓国語の中立記事**を LLM で生成するパイプラインです。
 
-*2024年10〜11月の個人プロジェクト。誠信女子大学 SW021「ChatGPT for Business」課程で学んだ内容の発展として制作しました。アプリ名は LLM-NAKOJA、リポジトリの旧名は `LLM_NAKOJA` です。*
+*2024年10〜11月の個人プロジェクト。誠信女子大学 SW021「ChatGPT for Business」課程で学んだ内容の発展として制作しました。リポジトリの旧名は `LLM_NAKOJA`（アプリ名 LLM-NAKOJA）です。*
 
-![NAKOJA ダッシュボード プレビュー](./NAKOJA_Preview.png)
+![Neutralize4KRJP ダッシュボード プレビュー](./NAKOJA_Preview.png)
 
 ## 問題意識
 

@@ -1,4 +1,4 @@
-"""Domain schemas and Pydantic models for LLM-NAKOJA."""
+"""Domain schemas and Pydantic models for Neutralize4KRJP."""
 
 from typing import List, Optional, Literal
 from pydantic import BaseModel, Field

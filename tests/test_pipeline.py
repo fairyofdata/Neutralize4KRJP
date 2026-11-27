@@ -1,4 +1,4 @@
-"""Unit tests for NAKOJA pipeline components with mocked OpenAI calls."""
+"""Unit tests for Neutralize4KRJP pipeline components with mocked OpenAI calls."""
 
 from unittest.mock import MagicMock
 import pytest

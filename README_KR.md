@@ -1,6 +1,6 @@
-<!-- 원본: README_KR.md (한국어판이 원본, 영·일은 번역) · 동기화: 2026-10-26 -->
+<!-- 원본: README_KR.md (한국어판이 원본, 영·일은 번역) · 동기화: 2026-11-27 -->
 
-# Neutralize4KRJP — 한일 양국 보도로 쓰는 중립 기사 (LLM-NAKOJA)
+# Neutralize4KRJP — 한일 양국 보도로 쓰는 중립 기사
 
 [English](README.md) · [한국어](README_KR.md) · [日本語](README_JP.md)
 
@@ -14,9 +14,9 @@
 
 중앙일보와 요미우리신문이 같은 사안을 다룬 기사를 짝지어, 공통 사실과 양국의 강조점 차이를 나눠 적은 **한국어·일본어 중립 기사**를 LLM 으로 만드는 파이프라인입니다.
 
-*2024년 10~11월 개인 프로젝트. 성신여자대학교 SW021 「ChatGPT for Business」 과정에서 배운 내용의 연장선에서 만들었습니다. 서비스 이름은 LLM-NAKOJA, 저장소 옛 이름은 `LLM_NAKOJA` 입니다.*
+*2024년 10~11월 개인 프로젝트. 성신여자대학교 SW021 「ChatGPT for Business」 과정에서 배운 내용의 연장선에서 만들었습니다. 저장소 옛 이름은 `LLM_NAKOJA`(서비스 이름 LLM-NAKOJA)입니다.*
 
-![NAKOJA 대시보드 미리보기](./NAKOJA_Preview.png)
+![Neutralize4KRJP 대시보드 미리보기](./NAKOJA_Preview.png)
 
 ## 문제의식
 

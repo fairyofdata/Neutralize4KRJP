@@ -1,4 +1,4 @@
-"""Unit tests for NAKOJA Pydantic schemas."""
+"""Unit tests for Neutralize4KRJP Pydantic schemas."""
 
 import pytest
 from pydantic import ValidationError
